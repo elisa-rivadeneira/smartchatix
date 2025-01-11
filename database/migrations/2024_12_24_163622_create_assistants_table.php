@@ -21,10 +21,14 @@ return new class extends Migration
         });
     }
 
-    public function down()
-    {
-        Schema::dropIfExists('assistants');
-        $table->dropForeign(['user_id']);
 
-    }
+
+    public function down()
+{
+    Schema::table('assistants', function (Blueprint $table) {
+        $table->dropForeign(['user_id']); // Elimina la clave foránea
+    });
+
+    Schema::dropIfExists('assistants'); // Finalmente elimina la tabla
+}
 };

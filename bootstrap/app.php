@@ -17,7 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             '/messenger/webhook',
             '/api/generate-response/*', // Excluir la ruta específica de CSRF
-          
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

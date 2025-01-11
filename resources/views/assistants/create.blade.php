@@ -20,6 +20,19 @@
                 <label for="prompt">Prompt</label>
                 <textarea name="prompt" id="prompt" class="form-control" required></textarea>
             </div>
+
+            <div class="form-group">
+                <label for="model_id">Modelo</label>
+                <select name="model_id" id="model_id" class="form-control">
+                    @foreach ($models as $model)
+                        <option value="{{ $model->id }}" {{ old('model_id', $assistant->model_id ?? '') == $model->id ? 'selected' : '' }}>
+                            {{ $model->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+
             <button type="submit" class="btn btn-primary">Crear Asistente</button>
         </form>
     </div>

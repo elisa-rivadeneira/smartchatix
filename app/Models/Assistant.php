@@ -15,6 +15,7 @@ class Assistant extends Model
         'prompt',
         'user_id',
         'whatsapp_number',  // Agregar el campo aquí
+        'model_id',  // Agregar el campo aquí
 
     ];
 
@@ -24,9 +25,14 @@ class Assistant extends Model
     }
 
     public function user()
-{
-    return $this->belongsTo(User::class);
-}
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function model()
+    {
+        return $this->belongsTo(AIModel::class, 'model_id');
+    }
 
 }
 

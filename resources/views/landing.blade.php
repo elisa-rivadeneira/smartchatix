@@ -161,6 +161,18 @@
     line-height: 1.4;
   }
 
+  .video-overlay-content {
+    padding: 15px;
+    transform: none;
+    top: 15%;
+    left: auto;
+  }
+  .thebest {
+    padding: 20px;
+    height: 100vh;
+
+  }
+
 }
 
 /* Estilos para pantallas pequeñas (mobile) */
@@ -512,7 +524,14 @@
 
 .pricing-section .pricing-table ul.features li {
     margin-bottom: 10px;
-    font-size: 14px;
+    font-size: 16px;
+}
+
+.pricing-section .pricing-table p {
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight:bold;
+
 }
 
 .pricing-section .pricing-table ul.features li i {
@@ -638,7 +657,7 @@ footer a:hover {
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
-                <a class="navbar-brand" href="#">Chatbot Personalizados</a>
+                <a class="navbar-brand" href="#">SmartChatix - Chatbot Personalizados</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -724,7 +743,7 @@ footer a:hover {
                         <li><i class="fas fa-check"></i> Soporte Humano Dedicado: Recibe atención personalizada de un experto que conoce a detalle tu configuración y necesidades</li>
 
                     </ul>
-                    <a href="#contact" id="start-chatbot3" class="btn btn-primary">Solicitar Prueba Gratis</a>
+                    <a href="#contact" id="start-chatbot3" class="btn btn-primary" onclick="pedirprueba()">Solicitar Prueba Gratis</a>
                 </div>
             </div>
         </div>

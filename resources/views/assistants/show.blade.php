@@ -5,8 +5,8 @@
         <h1>Detalles del Asistente</h1>
         <p><strong>Nombre:</strong> {{ $assistant->name }}</p>
         <p><strong>Información:</strong> {{ $assistant->prompt }}</p>
-        
-        {{-- Historial del Chat --}}
+        <p><strong>Total Tokens:</strong> {{ $assistant->total_tokens_used }}</p>
+        <!-- {{-- Historial del Chat --}}
         <h3>Historial del Chat</h3>
         <div id="chat-history">
             @foreach($chatHistories as $chat)
@@ -26,7 +26,7 @@
                 <input type="text" id="user_input" name="user_input" class="form-control" required>
             </div>
             <button type="submit" class="btn btn-primary">Enviarrrrr</button>
-        </form>
+        </form> -->
     </div>
 @endsection
 

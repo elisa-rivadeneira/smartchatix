@@ -41,58 +41,30 @@ function pedirprueba() {
 
     if (!pruebaMessageExists) {
         // Agregar mensaje inicial
-        // const initialMessage = document.createElement("div");
-        // initialMessage.className = "chat-message bot";
-        // initialMessage.innerHTML = "¿Quieres empezar tu prueba de 15 días? Por favor, elige una opción:";
-        // chatMessages.appendChild(initialMessage);
+        const initialMessage = document.createElement("div");
+        initialMessage.className = "chat-message bot";
+        initialMessage.innerHTML = "¿Quieres empezar tu prueba de 15 días? Por favor, elige una opción:";
+        chatMessages.appendChild(initialMessage);
 
-        // // Agregar botones "Sí" y "No"
-        // const buttonContainer = document.createElement("div");
-        // buttonContainer.className = "chat-options";
+        // Agregar botones "Sí" y "No"
+        const buttonContainer = document.createElement("div");
+        buttonContainer.className = "chat-options";
 
-        // // Botón "Sí"
-        // const yesButton = document.createElement("button");
-        // yesButton.className = "chat-option-btn";
-        // yesButton.innerHTML = "Sí";
-        // yesButton.onclick = () => handlePruebaResponse(true);
-        // buttonContainer.appendChild(yesButton);
+        // Botón "Sí"
+        const yesButton = document.createElement("button");
+        yesButton.className = "chat-option-btn";
+        yesButton.innerHTML = "Sí";
+        yesButton.onclick = () => handlePruebaResponse(true);
+        buttonContainer.appendChild(yesButton);
 
-        // // Botón "No"
-        // const noButton = document.createElement("button");
-        // noButton.className = "chat-option-btn";
-        // noButton.innerHTML = "No";
-        // noButton.onclick = () => handlePruebaResponse(false);
-        // buttonContainer.appendChild(noButton);
+        // Botón "No"
+        const noButton = document.createElement("button");
+        noButton.className = "chat-option-btn";
+        noButton.innerHTML = "No";
+        noButton.onclick = () => handlePruebaResponse(false);
+        buttonContainer.appendChild(noButton);
 
-        // chatMessages.appendChild(buttonContainer);
-
-        const welcomeMessage = "¡Hola! Estoy aquí para ayudarte a comenzar tu prueba gratuita. Si tienes alguna duda, ¡puedes hablar directamente con nuestro equipo! 😊";
-        chatMessages.innerHTML = ""; // Limpia mensajes previos
-
-
-        const newMessage = document.createElement("div");
-        newMessage.className = "chat-message bot";
-        newMessage.innerHTML = welcomeMessage;
-        chatMessages.appendChild(newMessage);
-
-        // Agregar un botón para redirigir a WhatsApp
-        const whatsappButton = document.createElement("button");
-        //chatButton.innerHTML = '<i class="fas fa-comments"></i>';
-
-        whatsappButton.innerHTML  = '<i class="fas fa-comments"></i> Solicitar Prueba Gratuita';
-        whatsappButton.style.marginTop = "10px";
-        whatsappButton.style.backgroundColor = "#25D366";
-        whatsappButton.style.color = "white";
-        whatsappButton.style.border = "none";
-        whatsappButton.style.padding = "10px";
-        whatsappButton.style.borderRadius = "5px";
-        whatsappButton.style.cursor = "pointer";
-        whatsappButton.onclick = () => {
-            window.open("https://wa.me/51967717179?text=¡Hola! Estoy interesado en la prueba gratuita.", "_blank");
-        };
-
-        chatMessages.appendChild(whatsappButton);
-
+        chatMessages.appendChild(buttonContainer);
     }
 }
 
@@ -111,7 +83,7 @@ function handlePruebaResponse(isYes) {
         const messageYes = document.createElement("div");
         messageYes.className = "chat-message bot";
         messageYes.innerHTML =
-            "¡Genial! Para solicitar tu prueba gratuita, por favor contáctanos vía WhatsApp haciendo clic <a href='https://wa.me/51967717179' target='_blank'>aquí</a>.";
+            "¡Genial! Para solicitar tu prueba gratuita, por favor contáctanos vía WhatsApp haciendo clic <a href='https://wa.me/1234567890' target='_blank'>aquí</a>.";
         chatMessages.appendChild(messageYes);
     } else {
         const messageNo = document.createElement("div");
@@ -122,12 +94,7 @@ function handlePruebaResponse(isYes) {
     }
 }
 
-// Agregar evento al botón de prueba gratis
-document.getElementById("start-chatbot").addEventListener("click", pedirprueba);
 
-
-// Agregar evento al botón de prueba gratis
-document.getElementById("start-chatbot").addEventListener("click", pedirprueba);
 
 
 
@@ -206,7 +173,9 @@ document.addEventListener("DOMContentLoaded", function () {
         chatClose.addEventListener("click", () => {
             chatWidget.style.display = "none";
         });
+
         let sessionId = null; // Valor inicial
+
 
         // Función para enviar mensaje
         const sendMessage = () => {
@@ -218,7 +187,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Limpiar el campo de entrada
             chatInput.value = "";
-
 
             // Enviar el mensaje al backend
             fetch(`https://smartchatix.com/api/generate-response/${chatId}`, {
@@ -235,10 +203,30 @@ document.addEventListener("DOMContentLoaded", function () {
                 .then((response) => response.json())
                 .then((data) => {
                     // Mostrar la respuesta del chatbot
-                    appendMessage("bot", data.assistant_response);
-                    console.log('data.assistant_response', data.assistant_response);
-                    console.log('data:::', data);
-                    console.log('session_id:::', data.session_id);
+                    function renderContent(content) {
+                        // Expresión regular para detectar URLs con extensiones de imágenes
+                        const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi;
+                        // Reemplaza URLs de imágenes con etiquetas <img>
+                        return content.replace(imageRegex, (url) => {
+                            return `<img src="${url}" alt="Imagen asociada" style="max-width: 100%; height: auto;" />`;
+                        });
+                    }
+
+                    //const renderedContent = renderContent(data.assistant_response);
+
+                        // Verificar si la respuesta contiene assistant_response
+                        if (data && data.assistant_response) {
+                            const renderedContent = renderContent(data.assistant_response);
+                            appendMessage("bot", renderedContent);
+
+                            if (data.session_id) {
+                                sessionId = data.session_id;
+                                console.log('Nuevo session_id asignado:', sessionId);
+                            }
+                        } else {
+                            appendMessage("bot", "Lo siento, no se pudo obtener una respuesta válida.");
+                        }
+                 //  appendMessage("bot", data.assistant_response);
 
                     if (data.session_id) {
                         sessionId = data.session_id;
@@ -331,7 +319,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Agregar un botón para redirigir a WhatsApp
         const whatsappButton = document.createElement("button");
-        //chatButton.innerHTML = '<i class="fas fa-comments"></i>';
+//        chatButton.innerHTML = '<i class="fas fa-comments"></i>';
 
         whatsappButton.innerHTML  = '<i class="fas fa-comments"></i> Solicitar Prueba Gratuita';
         whatsappButton.style.marginTop = "10px";
@@ -342,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function () {
         whatsappButton.style.borderRadius = "5px";
         whatsappButton.style.cursor = "pointer";
         whatsappButton.onclick = () => {
-            window.open("https://wa.me/51967717179?text=¡Hola! Estoy interesado en la prueba gratuita.", "_blank");
+            window.open("https://wa.me/1234567890?text=¡Hola! Estoy interesado en la prueba gratuita.", "_blank");
         };
 
         chatMessages.appendChild(whatsappButton);

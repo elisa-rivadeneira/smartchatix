@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Conversation extends Model
 {
-    protected $fillable = ['user_id', 'assistant_id', 'session_id']; // Asegúrate de incluir 'assistant_id'
+    protected $fillable = ['user_id', 'assistant_id', 'session_id', 'total_tokens']; // Asegúrate de incluir 'assistant_id'
 
     public function user()
     {

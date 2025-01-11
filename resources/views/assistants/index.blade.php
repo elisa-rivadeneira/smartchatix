@@ -3,7 +3,8 @@
 @section('content')
 <div class="container">
     <h1 class="my-4">Lista de Asistentes</h1>
-    
+    <h4 >Tokens Usados : {{  $user->total_tokens_used }}</h4>
+
     <!-- Botón para crear un nuevo asistente -->
     <a href="{{ route('assistants.create') }}" class="btn btn-primary mb-4">Crear Asistente</a>
     
@@ -23,6 +24,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Nombre</th>
+                        <th>Modelo</th>
                         <th>Prompt</th>
                         <th>Acciones</th>
                     </tr>
@@ -32,6 +34,7 @@
                         <tr>
                             <td>{{ $assistant->id }}</td>
                             <td>{{ $assistant->name }}</td>
+                            <td>{{ $assistant->model_name }}</td>
                             <td>{{ Str::limit($assistant->prompt, 50) }}</td>
                             <td>
                                 <!-- Opciones para ver, editar y eliminar -->

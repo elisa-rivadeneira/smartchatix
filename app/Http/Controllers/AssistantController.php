@@ -10,6 +10,12 @@ use App\Models\Document;
 use Illuminate\Support\Str;
 use App\Models\Conversation; // 
 use App\Models\Message; // 
+use App\Models\User; // 
+use App\Models\DocumentTraining; // 
+use App\Jobs\FineTuneAssistantJob;
+use App\Models\AIModel;
+use Illuminate\Support\Facades\DB; // Asegúrate de importar DB aquí
+
 
 
 
@@ -18,15 +24,24 @@ class AssistantController extends Controller
     // Muestra el formulario para crear un asistente
     public function create()
     {
-        return view('assistants.create'); // Devuelve la vista de creación
+        $models = AIModel::all(); // Obtener todos los modelos
+
+        //Log::info("Modelos: ".$models);
+        return view('assistants.create', compact('models'));
+    
     }
 
     public function index()
     {
-        $assistants = Assistant::where('user_id', auth()->id())->get();
+        $assistants = Assistant::where('user_id', auth()->id())
+        ->join('a_i_models', 'assistants.model_id', '=', 'a_i_models.id')  // Hacer el join con la tabla de modelos
+        ->select('assistants.*', 'a_i_models.name as model_name')  // Seleccionar todos los campos de assistants y el nombre del modelo
+        ->get();
+        $user = User::find(auth()->id());
+
         //$assistants = Assistant::all(); // Obtenemos todos los asistentes
-        //dd($assistants);
-        return view('assistants.index', compact('assistants'));
+     //  dd($user);
+        return view('assistants.index', compact('assistants','user'));
     }
 
     public function show($id)
@@ -42,15 +57,19 @@ class AssistantController extends Controller
     public function store(Request $request)
     {
 
+       // dd($request);
         $user_id= auth()->id();
-        //dd($user_id);
 
         // Validación de los datos del formulario
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'whatsapp_number' => 'required|string|max:255',
             'prompt' => 'required|string',
+            'model_id' => 'required|exists:a_i_models,id', // Asegúrate de que el model_id sea válido
+
         ]);
+
+      //  dd($validated);
 
         // Crear el asistente en la base de datos
         Assistant::create([
@@ -58,6 +77,8 @@ class AssistantController extends Controller
             'whatsapp_number' => $validated['whatsapp_number'],
             'prompt' => $validated['prompt'],
             'user_id' => $user_id,
+            'model_id' => $validated['model_id'],
+
         ]);
 
         // Redirigir a la lista de asistentes o a una página de éxito
@@ -66,23 +87,42 @@ class AssistantController extends Controller
 
     public function edit($id)
 {
+
+    Log::info("El id que jala es : ".$id);
+
     // Buscar el asistente por ID
-    $assistant = Assistant::findOrFail($id);
+    $assistant = Assistant::with('model')  // Si tienes una relación definida en el modelo Assistant
+    ->join('a_i_models', 'assistants.model_id', '=', 'a_i_models.id') // Hacer el join con la tabla de modelos
+    ->select('assistants.*', 'a_i_models.name as model_name') // Seleccionar los campos de assistants y el nombre del modelo
+    ->where('assistants.id', $id)  // Filtrar por ID
+    ->first();  // Obtener el primer (y único) resultado
+
+    $models = AIModel::all(); // Obtener todos los modelos
+
+    Log::info("assistant: ".$assistant);
+
+
+
     $document = Document::where('assistant_id', $id)->first(); // Buscar documento asociado
-    ($document);
+   // ($document);
 
     // Retornar la vista de edición con los datos del asistente
-    return view('assistants.edit', compact('assistant', 'document'));
+    return view('assistants.edit', compact('assistant', 'document', 'models'));
 
 }
 
     public function update(Request $request, $id)
 {
+
+   // Log::info('$request:::'.$request);
+
+    Log::info('$id:::'.$id);
     // Validar los datos
     $validated = $request->validate([
         'name' => 'required|string|max:255',
         'whatsapp_number' => 'required|string|max:255',
         'prompt' => 'required|string',
+        'model_id' => 'required|exists:a_i_models,id', // Asegúrate de que el model_id sea válido
     ]);
 
     // Buscar y actualizar el asistente
@@ -111,6 +151,8 @@ public function generateResponse(Request $request, $id)
     $assistant = Assistant::findOrFail($id);
 
     $prompt = $assistant->prompt;
+
+
     $user_input = $request->input('user_input');
 
      // Verificar si el asistente tiene un documento asociado
@@ -207,9 +249,29 @@ public function publicGenerateResponse(Request $request, $id)
     Log::info('Entrando al método publicGenerateResponse con ID: ' . $id);
 
     $assistant = Assistant::findOrFail($id);
+
+    $model = DB::table('assistants')
+    ->join('a_i_models', 'assistants.model_id', '=', 'a_i_models.id')
+    ->where('assistants.id', $assistant->id) // Filtrar por el ID del asistente
+    ->select('a_i_models.identifier as model_identifier')
+    ->first(); // Obtener solo el primer resultado
+
+    // Obtener el nombre del modelo
+    $model_identifier = $model->model_identifier;
+
+    Log::info('El modelo que llamamos es ::::'.$model_identifier);
+
     $prompt = $assistant->prompt;
+
+   // Log::info('Prompt inicial_______: ' . $prompt);
+
     $user_input = $request->input('user_input');
     $sessionId = $request->input('session_id') ?? Str::uuid()->toString();
+
+   // Log::info('Request:::::::: ' . $request);
+    Log::info('sessionId:::::::: ' . $sessionId);
+
+
 
     // Verificar si el asistente tiene un documento asociado
     $document = Document::where('assistant_id', $assistant->id)->first();
@@ -217,7 +279,22 @@ public function publicGenerateResponse(Request $request, $id)
         $prompt .= "\n\n" . "Contenido del documento: " . $document->content;
     }
 
-    Log::info('Prompt: ' . $prompt);
+
+
+    $prompt .= "Responde de manera clara y estructurada. Usa Markdown para formatear tus respuestas:
+        - Listas para enumeraciones.
+        - Negrillas para destacar palabras importantes.
+        - Títulos y subtítulos si es necesario.
+        - Saltos de línea para separar ideas.
+        
+        Ejemplo:
+         Lugares a visitar en  Lima:
+        - Parque de las Aguas : Hermoso parque de agua con efectos muy llamativos 
+        - Parque Wiracocha : Ideal para pasar un dia en familia
+        - Costa Verde : Ver el sol, conversar con el mar. Pasar momentos inolvidables";
+
+
+  Log::info('Prompt:::::::: ' . $prompt);
 
 
     // Interpretar la entrada del usuario
@@ -274,19 +351,41 @@ public function publicGenerateResponse(Request $request, $id)
         }
         $messages[] = ['role' => 'user', 'content' => $user_input];
 
+        Log::info('$model_identifier::::'.$model_identifier);
+
         // Llamada a la API de OpenAI
         $openAIResponse = Http::withToken(config('services.openai.api_key'))
             ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-3.5-turbo',
-                'messages' => $messages,
+                //'model' => 'gpt-3.5-turbo',
+              //  'model' => 'gpt-4o-mini',
+              //'model' => 'ft:gpt-3.5-turbo-0125:personal::An7XBcbe',
+                'model' => $model_identifier,
+              
+              
+              'messages' => $messages,
                 'max_tokens' => 1000,
-                'temperature' => 0.7,
+                'temperature' => 0.1,
             ]);
 
         if ($openAIResponse->successful()) {
             $responseData = $openAIResponse->json();
             $generatedText = $responseData['choices'][0]['message']['content'];
+                // Captura los datos de uso
+            $promptTokens = $responseData['usage']['prompt_tokens'] ?? 0;
+            $completionTokens = $responseData['usage']['completion_tokens'] ?? 0;
+            $totalTokens = $responseData['usage']['total_tokens'] ?? 0;
+
+
+            // Formatear el texto generado
+            $generatedText = nl2br($generatedText); // Convertir saltos de línea a <br>
+            $generatedText = preg_replace('/^- (.+)/m', '<li>$1</li>', $generatedText);
+            if (strpos($generatedText, '<li>') !== false) {
+                $generatedText = "<ul>" . $generatedText . "</ul>";
+            }
+
+
             Log::info('Texto generado IA: ' . $generatedText);
+
 
 
             if (strpos($generatedText, 'hablar') !== false || strpos($generatedText, 'WhatsApp') !== false ) {
@@ -322,11 +421,57 @@ public function publicGenerateResponse(Request $request, $id)
                 'assistant_response' => $generatedText,
             ]);
 
-            // Guardar conversación y mensajes
-            $conversation = Conversation::firstOrCreate(
-                ['session_id' => $sessionId, 'assistant_id' => $assistant->id],
-                ['assistant_id' => $assistant->id]
-            );
+            Log::info('session_id: ' . $sessionId);
+            Log::info('assistant_id: ' . $assistant->id);
+
+            $conversation = Conversation::where('session_id', $sessionId)
+            ->where('assistant_id', $assistant->id)
+            ->first();
+
+
+            Log::info('encontrando conversa: ' . $conversation);
+
+        $user = User::find($assistant->user_id); // El id_user es la relación con el usuario
+
+
+        if (!$conversation) {
+            Log::info('Primer mensaje con tokens: ' . $totalTokens);
+        
+            $conversation = Conversation::create([
+                'session_id' => $sessionId,
+                'assistant_id' => $assistant->id,
+                'total_tokens' => $totalTokens,
+            ]);
+
+             // Actualizar el total de tokens usados por el asistente
+             $assistant->total_tokens_used += $totalTokens;
+             $assistant->save();
+         
+
+             $user->total_tokens_used += $totalTokens;
+             $user->save();
+
+
+        
+            Log::info('Nueva conversación creada: ' . json_encode($conversation->toArray()));
+        } else {
+            Log::info('Mensaje secundario: Incrementando tokens');
+        
+            // Incrementar los tokens si ya existe la conversación
+            $conversation->increment('total_tokens', $totalTokens);
+            
+
+
+            // Actualizar el total de tokens usados por el asistente
+            $assistant->total_tokens_used += $totalTokens;
+            $assistant->save();
+
+            $user->total_tokens_used += $totalTokens;
+            $user->save();
+
+        
+            Log::info('Tokens actualizados: ' . $conversation->total_tokens);
+        }
             Message::create(['conversation_id' => $conversation->id, 'sender' => 'user', 'message' => $user_input]);
             Message::create(['conversation_id' => $conversation->id, 'sender' => 'assistant', 'message' => $generatedText]);
 
@@ -395,31 +540,31 @@ public function askOpenAI_pidehumano($user_input)
 
 
     // Incluir el mensaje actual del usuario
-$messages[] = ['role' => 'user', 'content' => $user_input];
-$messageString = json_encode($messages);  // Encode the array as JSON
+    $messages[] = ['role' => 'user', 'content' => $user_input];
+    $messageString = json_encode($messages);  // Encode the array as JSON
 
-Log::info('Mensaje enviado:::'. $messageString);
+    Log::info('Mensaje enviado:::'. $messageString);
 
-    $response = Http::withToken(config('services.openai.api_key'))
-    ->post('https://api.openai.com/v1/chat/completions', [
-        'model' => 'gpt-3.5-turbo',
-        'messages' => $messages,
-        'max_tokens' => 1000,
-        'temperature' => 0.7,
-    ]);
-
-
-    $body = $response->getBody();
+    // $response = Http::withToken(config('services.openai.api_key'))
+    // ->post('https://api.openai.com/v1/chat/completions', [
+    //     'model' => 'gpt-3.5-turbo',
+    //     'messages' => $messages,
+    //     'max_tokens' => 1000,
+    //     'temperature' => 0.7,
+    // ]);
 
 
-    $data = json_decode($body, true);
-    // Check if $data is an array before logging
-        if (is_array($data)) {
-            Log::info('data:', $data);
-        } else {
-            // Handle the case where $data is not an array (e.g., log an error message)
-            Log::error('Unexpected data type for $body. Expected array, got: ' . gettype($data));
-        }
+    // $body = $response->getBody();
+
+
+    // $data = json_decode($body, true);
+    // // Check if $data is an array before logging
+    //     if (is_array($data)) {
+    //         Log::info('data:', $data);
+    //     } else {
+    //         // Handle the case where $data is not an array (e.g., log an error message)
+    //         Log::error('Unexpected data type for $body. Expected array, got: ' . gettype($data));
+    //     }
 
 
     // Aquí interpreto si la respuesta contiene un interés por hablar con un humano
@@ -436,5 +581,182 @@ Log::info('Mensaje enviado:::'. $messageString);
 }
 
 
+public function uploadDocumentTraining(Request $request, $assistantId)
+{
+    // Validar y guardar el archivo (como ya lo tienes configurado)
+    $request->validate([
+        'file' => 'required|file|max:10240',
+    ]);
+
+    $file = $request->file('file');
+    $extension = $file->getClientOriginalExtension();
+
+    if ($extension !== 'jsonl') {
+        return back()->withErrors(['file' => 'El archivo debe ser de tipo .jsonl.']);
+    }
+
+    $assistant = Assistant::findOrFail($assistantId);
+    $path = $file->store('documents', 'public');
+
+    $documentTraining = new DocumentTraining();
+    $documentTraining->filename = $file->getClientOriginalName();
+    $documentTraining->path = $path;
+    $documentTraining->assistant_id = $assistant->id;
+    $documentTraining->save();
+
+    Log::info('Documento de entrenamiento creado:', ['documentTraining' => $documentTraining]);
+
+
+    // Despachar el Job para realizar el fine-tuning
+
+    FineTuneAssistantJob::dispatch($assistant->id, $documentTraining->id);
+
+    //FineTuneAssistantJob::dispatch($assistant, $documentTraining);
+    Log::info('Linea 558 ______');
+
+    return back()->with('success', 'Documento de entrenamiento subido y proceso de fine-tuning iniciado.');
+}
+
+
+
+// public function monitorFineTuning($id)
+// {
+//     Log::info('En metodo FineTuning con id : '. $id);
+
+//     $assistant = Assistant::find($id);
+
+//     Log::info('El assistant es : '. $assistant->name);
+
+//     if (!$assistant || !$assistant->fine_tuning_job_id) {
+//         return response()->json(['error' => 'No hay un trabajo de fine-tuning asociado.'], 404);
+//     }
+
+//     Log::info('Todo bien hasta aquí linea 580 : ');
+
+//     $apiKey = config('services.openai.api_key');
+
+//     // Obtener el estado del trabajo de fine-tuning
+//     $statusResponse = Http::withHeaders([
+//         'Authorization' => 'Bearer ' . $apiKey,
+//     ])->get("https://api.openai.com/v1/fine_tuning/jobs/{$assistant->fine_tuning_job_id}");
+
+//     if (!$statusResponse->successful()) {
+//         return response()->json(['error' => 'Error al consultar el estado del fine-tuning.'], 500);
+//     }
+
+//     // Obtener los eventos del trabajo de fine-tuning
+//     $eventsResponse = Http::withHeaders([
+//         'Authorization' => 'Bearer ' . $apiKey,
+//     ])->get("https://api.openai.com/v1/fine_tuning/jobs/{$assistant->fine_tuning_job_id}/events");
+
+//     if ($eventsResponse->successful()) {
+
+//         $statusData = $eventsResponse->json();
+
+//         Log::info('statusdata:::' . json_encode($statusData));
+
+//         // Verificar si el fine-tuning se completó
+//         $modelName = null;
+//         $model_name = $eventsResponse->json()['data'][0]['fine_tuned_model'] ?? null; // Ajusta según la estructura de la respuesta
+
+
+//         // Retornar tanto el estado como los eventos
+//         return response()->json([
+//             'status' => $statusResponse->json(),
+//             'events' => $eventsResponse->json()['data'],
+//             'model_name' => $modelName          // Nombre del modelo fine-tuneado
+
+//         ]);
+//     } else {
+//         return response()->json(['error' => 'Error al obtener los eventos del fine-tuning.'], 500);
+//     }
+// }
+
+public function monitorFineTuning($id)
+{
+    Log::info('En método FineTuning con id: ' . $id);
+
+    $assistant = Assistant::find($id);
+
+    if (!$assistant || !$assistant->fine_tuning_job_id) {
+        return response()->json(['error' => 'No hay un trabajo de fine-tuning asociado.'], 404);
+    }
+
+    Log::info('El assistant es: ' . $assistant->name);
+
+    $apiKey = config('services.openai.api_key');
+
+    // Obtener el estado del trabajo de fine-tuning
+    $statusResponse = Http::withHeaders([
+        'Authorization' => 'Bearer ' . $apiKey,
+    ])->get("https://api.openai.com/v1/fine_tuning/jobs/{$assistant->fine_tuning_job_id}");
+
+    if (!$statusResponse->successful()) {
+        return response()->json(['error' => 'Error al consultar el estado del fine-tuning.'], 500);
+    }
+
+    // Obtener los eventos del trabajo de fine-tuning
+    $eventsResponse = Http::withHeaders([
+        'Authorization' => 'Bearer ' . $apiKey,
+    ])->get("https://api.openai.com/v1/fine_tuning/jobs/{$assistant->fine_tuning_job_id}/events");
+
+    if ($eventsResponse->successful()) {
+        Log::info('Eventos del fine-tuning obtenidos.');
+
+        // Consultar todos los trabajos de fine-tuning para encontrar el modelo
+        $allJobsResponse = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $apiKey,
+        ])->get("https://api.openai.com/v1/fine_tuning/jobs");
+
+        if ($allJobsResponse->successful()) {
+            $allJobs = $allJobsResponse->json()['data'];
+
+            // Buscar el trabajo correspondiente al asistente
+            $job = collect($allJobs)->firstWhere('id', $assistant->fine_tuning_job_id);
+
+            if ($job && isset($job['fine_tuned_model'])) {
+                $modelName = $job['fine_tuned_model'];
+
+                // Guardar el modelo fine-tuned en la base de datos del asistente
+                $assistant->fine_tuned_model = $modelName;
+                $assistant->save();
+
+                Log::info("Modelo fine-tuned guardado: $modelName");
+            } else {
+                Log::warning('No se encontró el modelo fine-tuned para este asistente.');
+                $modelName = null;
+            }
+        } else {
+            Log::error('Error al consultar todos los trabajos de fine-tuning.');
+            return response()->json(['error' => 'Error al consultar trabajos de fine-tuning.'], 500);
+        }
+
+        // Retornar tanto el estado como los eventos
+        return response()->json([
+            'status' => $statusResponse->json(),
+            'events' => $eventsResponse->json()['data'],
+            'model_name' => $modelName // Nombre del modelo fine-tuneado
+        ]);
+    } else {
+        Log::error('Error al obtener los eventos del fine-tuning.');
+        return response()->json(['error' => 'Error al obtener los eventos del fine-tuning.'], 500);
+    }
+}
+
+
+
+
+
 
 }
+
+
+// 25-01-07 13:59:59] production.INFO: Fine-tuning iniciado con éxito. Job ID: ftjob-nJa8H0uK13i9eaUn7u1b5kAm  
+//Ver en postman el idjob estado:
+// https://api.openai.com/v1/fine_tuning/jobs/ftjob-6wMUDxtpEtpllOOLcMCI1Ek3/events  // smartchatix
+// https://api.openai.com/v1/fine_tuning/jobs/ftjob-7ghbHGPZh9wbIuwyYyzXJwSc/events // trubotec
+
+
+
+//Ve los modelos generados en fine tunning
+//https://api.openai.com/v1/fine_tuning/jobs con headers del bearer

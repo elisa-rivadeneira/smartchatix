@@ -63,8 +63,9 @@ return [
     |
     */
 
-    'logo' => '<b>Admin</b>LTE',
-    'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
+    'logo' => '<b>Smart</b>Chatix',
+    'logo_img' => '/images/smartchatix_logo.jpg',
+    // 'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-xs',
@@ -340,6 +341,11 @@ return [
             'icon' => 'fas fa-comments', // Puedes cambiar el icono si lo deseas
             'icon_color' => 'gray',
         ],
+        [
+            'text' => 'Modelos IA',
+            'url'  => 'admin/a-i-models', // URL del CRUD de modelos
+            'icon' => 'fas fa-robot',    // Icono de FontAwesome
+                  ],
 
         [
             'text' => 'change_password',

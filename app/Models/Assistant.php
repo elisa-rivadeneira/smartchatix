@@ -14,9 +14,9 @@ class Assistant extends Model
         'name',
         'prompt',
         'user_id',
-        'whatsapp_number',  // Agregar el campo aquí
-        'model_id',  // Agregar el campo aquí
-
+        'whatsapp_number',  
+        'model_id', 
+        'type'
     ];
 
     public function chatHistories()

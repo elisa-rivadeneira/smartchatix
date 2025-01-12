@@ -11,6 +11,15 @@
         <input type="text" name="name" id="name" class="form-control" value="{{ old('name', $assistant->name) }}" required>
     </div>
 
+    <div class="form-group">
+    <label for="type">Tipo de Servicio</label>
+    <select name="type" id="type" class="form-control">
+        <option value="curso" {{ $assistant->type == 'curso' ? 'selected' : '' }}>Curso</option>
+        <option value="producto" {{ $assistant->type == 'producto' ? 'selected' : '' }}>Producto</option>
+        <option value="servicio" {{ $assistant->type == 'servicio' ? 'selected' : '' }}>Servicio</option>
+    </select>
+    </div>
+
 
     <div class="form-group">
                 <label for="model_id">Modelo</label>

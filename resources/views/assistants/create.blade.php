@@ -11,6 +11,16 @@
                 <label for="name">Nombre del Asistente</label>
                 <input type="text" name="name" id="name" class="form-control" required>
             </div>
+
+            <div class="form-group">
+            <label for="type">Tipo de Servicio</label>
+                <select name="type" id="type" class="form-control">
+                <option value="curso">Curso</option>
+                <option value="producto">Producto</option>
+                <option value="servicio">Servicio</option>
+                </select>
+            </div>
+
             <div class="form-group">
                 <label for="name">WhatsApp Contacto Humano</label>
                 <input type="text" name="whatsapp_number" id="whatsapp_number" class="form-control" required>

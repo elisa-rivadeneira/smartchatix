@@ -19,6 +19,8 @@
             <textarea class="form-control" id="description" name="description">{{ $model->description }}</textarea>
         </div>
         <button type="submit" class="btn btn-primary">Actualizar</button>
+
+        
     </form>
 </div>
 @endsection

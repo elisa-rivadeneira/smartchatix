@@ -15,6 +15,10 @@ function lanzarchat() {
         newMessage.className = "chat-message bot";
         newMessage.innerHTML = welcomeMessage;
 
+
+
+
+
         chatMessages.appendChild(newMessage);
     } else {
         console.error("El chatbot no está inicializado correctamente.");
@@ -102,6 +106,8 @@ function handlePruebaResponse(isYes) {
 document.addEventListener("DOMContentLoaded", function () {
 
 
+
+
     
     function initChatbot(config) {
         console.log("En initChatbot");
@@ -167,6 +173,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // Mostrar/Ocultar el widget del chatbot
         chatButton.addEventListener("click", () => {
             toggleChatWidget(chatWidget, config.welcomeMessage);
+
+   
         });
 
         // Cerrar el widget del chatbot
@@ -203,21 +211,23 @@ document.addEventListener("DOMContentLoaded", function () {
                 .then((response) => response.json())
                 .then((data) => {
                     // Mostrar la respuesta del chatbot
-                    function renderContent(content) {
-                        // Expresión regular para detectar URLs con extensiones de imágenes
-                        const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi;
-                        // Reemplaza URLs de imágenes con etiquetas <img>
-                        return content.replace(imageRegex, (url) => {
-                            return `<img src="${url}" alt="Imagen asociada" style="max-width: 100%; height: auto;" />`;
-                        });
-                    }
+                    // function renderContent(content) {
+                    //     // Expresión regular para detectar URLs con extensiones de imágenes
+                    //     const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi;
+                    //     // Reemplaza URLs de imágenes con etiquetas <img>
+                    //     return content.replace(imageRegex, (url) => {
+                    //         return `<img src="${url}" alt="Imagen asociada" style="max-width: 100%; height: auto;" />`;
+                    //     });
+                    // }
 
                     //const renderedContent = renderContent(data.assistant_response);
 
                         // Verificar si la respuesta contiene assistant_response
                         if (data && data.assistant_response) {
-                            const renderedContent = renderContent(data.assistant_response);
-                            appendMessage("bot", renderedContent);
+
+
+                           // const renderedContent = renderContent(data.assistant_response);
+                            appendMessage("bot", data.assistant_response);
 
                             if (data.session_id) {
                                 sessionId = data.session_id;
@@ -246,8 +256,20 @@ document.addEventListener("DOMContentLoaded", function () {
         // Enviar mensaje al presionar Enter
         chatInput.addEventListener("keydown", (event) => {
             if (event.key === "Enter") {
+                console.log('enviando mensaje');
+
+                // Mostrar el indicador de escritura antes de enviar el mensaje
+                showTypingIndicator();
+
                 sendMessage();
+
+                // Prevenir el comportamiento por defecto del Enter
                 event.preventDefault();
+
+                // Ocultar el indicador de escritura después de un pequeño retraso
+                setTimeout(() => {
+                    hideTypingIndicator();
+                }, 1000);  // Ajusta el tiempo según sea necesario
             }
         });
 
@@ -262,36 +284,51 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // Función para mostrar el widget del chatbot y mensaje personalizado
-        function toggleChatWidget(chatWidget, welcomeMessage) {
-            console.log('funcion togglechat')
-            chatWidget.style.display = chatWidget.style.display === "none" ? "block" : "none";
-            if (welcomeMessage && chatWidget.style.display === "block") {
-                //appendMessage("bot", welcomeMessage);
-                console.log('weoclme message and block')
+function toggleChatWidget(chatWidget, welcomeMessage) {
+    console.log('funcion togglechat');
+    chatWidget.style.display = chatWidget.style.display === "none" ? "block" : "none";
 
-            // Verificar si el mensaje de bienvenida ya existe
-                const welcomeMessageExists = Array.from(chatMessages.children).some(
-                    (child) => child.className === "chat-message bot" && child.innerHTML === welcomeMessage
-                );
+    if (!chatWidget.classList.contains("active")) {
+        chatWidget.classList.add("active");
+              // Mostrar indicador de escritura al abrir el widget
+              
+        
+        // Si se proporciona un mensaje de bienvenida, se muestra
+        if (welcomeMessage) {
+            console.log('welcome message and block');
 
-                if (!welcomeMessageExists) {
-                    console.log('mensaje no existe de bienvenida')
-                    // Si no existe, agregar el mensaje de bienvenida
-                    const newMessage = document.createElement("div");
-                    newMessage.className = "chat-message bot";
-                    newMessage.innerHTML = welcomeMessage;
-                    chatMessages.appendChild(newMessage);
-                }else{
-                    console.log('mensaje SI existe de bienvenida')
-                    // Si no existe, agregar el mensaje de bienvenida
-                    const newMessage = document.createElement("div");
-                    newMessage.className = "chat-message bot";
-                    newMessage.innerHTML = "";
-                    //chatMessages.appendChild(newMessage);
-                }
+            const welcomeMessageExists = Array.from(chatMessages.children).some(
+                (child) => child.className === "chat-message bot" && child.innerHTML === welcomeMessage
+            );
 
+            if (!welcomeMessageExists) {
+                
+
+                const newMessage = document.createElement("div");
+                newMessage.className = "chat-message bot";
+                newMessage.innerHTML = welcomeMessage;
+                chatMessages.appendChild(newMessage);
+    
+                console.log('Mensaje de bienvenida agregado');
+
+                
+
+
+            } else {
+                console.log('mensaje SI existe de bienvenida');
+                
+                
+                // Si no existe, agregar el mensaje de bienvenida
+                const newMessage = document.createElement("div");
+                newMessage.className = "chat-message bot";
+                newMessage.innerHTML = "";
+          
             }
         }
+    } else {
+        chatWidget.classList.remove("active");
+    }
+}
     }
 
     // Llamar a initChatbot para el botón general
@@ -311,11 +348,10 @@ document.addEventListener("DOMContentLoaded", function () {
         // Mostrar el widget y mensaje personalizado
         chatbotWidget.style.display = "block";
         const chatMessages = document.getElementById("chatbot-messages");
-        chatMessages.innerHTML = ""; // Limpia mensajes previos
-        const newMessage = document.createElement("div");
-        newMessage.className = "chat-message bot";
-        newMessage.innerHTML = welcomeMessage;
-        chatMessages.appendChild(newMessage);
+
+
+    
+
 
         // Agregar un botón para redirigir a WhatsApp
         const whatsappButton = document.createElement("button");
@@ -335,4 +371,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
         chatMessages.appendChild(whatsappButton);
     });
+
+    function showTypingIndicator() {
+        // Verificar si ya existe el indicador de escritura
+        if (!document.getElementById("typing-indicator")) {
+            // Crear el div del indicador de escritura
+            const typingIndicator = document.createElement("div");
+            typingIndicator.id = "typing-indicator";
+            typingIndicator.innerHTML = '<div class="typing">...</div>';  // Aquí va la animación
+    
+            // Obtener el contenedor de los mensajes
+            const messagesContainer = document.getElementById("chatbot-messages");
+            
+            // Verificar que el contenedor de mensajes existe
+            if (messagesContainer) {
+                // Insertar el typingIndicator dentro del contenedor de mensajes
+                messagesContainer.appendChild(typingIndicator);
+            } else {
+                console.error("El contenedor de mensajes no existe.");
+            }
+        }
+    }
+    
+    
+    function hideTypingIndicator() {
+        const typingIndicator = document.getElementById("typing-indicator");
+        if (typingIndicator) {
+            typingIndicator.style.display = "none";
+        }
+    }
+
+
+
 });

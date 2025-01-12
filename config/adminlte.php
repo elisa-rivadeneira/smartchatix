@@ -352,6 +352,29 @@ return [
             'url' => 'admin/settings',
             'icon' => 'fas fa-fw fa-lock',
         ],
+
+                // Encabezado de productos y cursos
+                ['header' => 'GESTIÓN DE SERVICIOS'],
+
+                // Productos/Servicios
+                [
+                    'text' => 'Productos/Servicios',
+                    'url'  => 'products',
+                    'icon' => 'fas fa-box',
+                ],
+        
+                // Cursos
+                [
+                    'text' => 'Cursos',
+                    'url'  => 'courses',
+                    'icon' => 'fas fa-book',
+                ],
+
+
+
+
+        
+    
         // [
         //     'text' => 'multilevel',
         //     'icon' => 'fas fa-fw fa-share',

@@ -8,7 +8,7 @@ use App\Http\Controllers\MessengerController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\FineTuneController;
 use App\Http\Controllers\AIModelController;
-
+use App\Http\Controllers\CourseController;
 
 
 Auth::routes();
@@ -61,7 +61,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/conversations/{id}', [ConversationController::class, 'show'])->name('conversations.show');
     Route::delete('/conversations/{id}', [ConversationController::class, 'destroy'])->name('conversations.destroy');
 
-    
+    Route::resource('courses', CourseController::class);
+
 
     Route::get('/assistants/{id}/monitor-finetuning', [AssistantController::class, 'monitorFineTuning'])->name('assistants.monitorFineTuning');
 

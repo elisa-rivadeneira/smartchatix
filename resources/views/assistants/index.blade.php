@@ -22,11 +22,11 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Modelo</th>
-                        <th>Prompt</th>
-                        <th>Acciones</th>
+                        <th width="5%">ID</th>
+                        <th width="20%">Nombre</th>
+                        <th width="20%">Modelo</th>
+                        <th width="35%">Prompt</th>
+                        <th width="20%">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,14 +38,14 @@
                             <td>{{ Str::limit($assistant->prompt, 50) }}</td>
                             <td>
                                 <!-- Opciones para ver, editar y eliminar -->
-                                <a href="{{ route('assistants.show', $assistant->id) }}" class="btn btn-info btn-sm">Ver</a>
+                                <a href="{{ route('assistants.show', $assistant->id) }}" class="btn btn-info btn-sm">Chat</a>
                                 <a href="{{ route('assistants.edit', $assistant->id) }}" class="btn btn-warning btn-sm">Editar</a>
                                 
                                 <!-- Formulario para eliminar -->
                                 <form action="{{ route('assistants.destroy', $assistant->id) }}" method="POST" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este asistente?');">Eliminar</button>
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este asistente?');">x</button>
                                 </form>
                             </td>
                         </tr>

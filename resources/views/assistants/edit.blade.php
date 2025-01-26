@@ -17,6 +17,8 @@
         <option value="curso" {{ $assistant->type == 'curso' ? 'selected' : '' }}>Curso</option>
         <option value="producto" {{ $assistant->type == 'producto' ? 'selected' : '' }}>Producto</option>
         <option value="servicio" {{ $assistant->type == 'servicio' ? 'selected' : '' }}>Servicio</option>
+        <option value="base_de_datos" {{ $assistant->type == 'base_de_datos' ? 'selected' : '' }}>Base de Datos</option>
+
     </select>
     </div>
 

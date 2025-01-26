@@ -24,7 +24,6 @@ function lanzarchat() {
 
 
 // Función para iniciar el flujo de prueba gratis
-// Función para iniciar el flujo de prueba gratis
 function pedirprueba() {
     const chatWidget = document.getElementById("chatbot-widget");
     const chatMessages = document.getElementById("chatbot-messages");
@@ -40,31 +39,6 @@ function pedirprueba() {
     );
 
     if (!pruebaMessageExists) {
-        // Agregar mensaje inicial
-        // const initialMessage = document.createElement("div");
-        // initialMessage.className = "chat-message bot";
-        // initialMessage.innerHTML = "¿Quieres empezar tu prueba de 15 días? Por favor, elige una opción:";
-        // chatMessages.appendChild(initialMessage);
-
-        // // Agregar botones "Sí" y "No"
-        // const buttonContainer = document.createElement("div");
-        // buttonContainer.className = "chat-options";
-
-        // // Botón "Sí"
-        // const yesButton = document.createElement("button");
-        // yesButton.className = "chat-option-btn";
-        // yesButton.innerHTML = "Sí";
-        // yesButton.onclick = () => handlePruebaResponse(true);
-        // buttonContainer.appendChild(yesButton);
-
-        // // Botón "No"
-        // const noButton = document.createElement("button");
-        // noButton.className = "chat-option-btn";
-        // noButton.innerHTML = "No";
-        // noButton.onclick = () => handlePruebaResponse(false);
-        // buttonContainer.appendChild(noButton);
-
-        // chatMessages.appendChild(buttonContainer);
 
         const welcomeMessage = "¡Hola! Estoy aquí para ayudarte a comenzar tu prueba gratuita. Si tienes alguna duda, ¡puedes hablar directamente con nuestro equipo! 😊";
         chatMessages.innerHTML = ""; // Limpia mensajes previos
@@ -126,11 +100,6 @@ function handlePruebaResponse(isYes) {
 document.getElementById("start-chatbot").addEventListener("click", pedirprueba);
 
 
-// Agregar evento al botón de prueba gratis
-document.getElementById("start-chatbot").addEventListener("click", pedirprueba);
-
-
-
 
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -142,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Crear el contenedor si no existe
         const container = document.querySelector(config.container);
         if (!container) {
-            console.error("El contenedor del chatbot no existe.");
+            console.error("El contenedor del chatbot no existe___.");
             return;
         }
 
@@ -170,6 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Crear el widget de chat (inicialmente oculto)
         let chatWidget = document.getElementById("chatbot-widget");
         if (!chatWidget) {
+            console.log('Creando chatWidget')
             chatWidget = document.createElement("div");
             chatWidget.id = "chatbot-widget";
             chatWidget.style.display = "none"; // Inicialmente oculto
@@ -277,32 +247,74 @@ document.addEventListener("DOMContentLoaded", function () {
         function toggleChatWidget(chatWidget, welcomeMessage) {
             console.log('funcion togglechat')
             chatWidget.style.display = chatWidget.style.display === "none" ? "block" : "none";
-            if (welcomeMessage && chatWidget.style.display === "block") {
-                //appendMessage("bot", welcomeMessage);
-                console.log('weoclme message and block')
+            
+            // if (welcomeMessage && chatWidget.style.display === "block") {
+            //     //appendMessage("bot", welcomeMessage);
+            //     console.log('weoclme message and block')
 
-            // Verificar si el mensaje de bienvenida ya existe
-                const welcomeMessageExists = Array.from(chatMessages.children).some(
-                    (child) => child.className === "chat-message bot" && child.innerHTML === welcomeMessage
-                );
+            // // Verificar si el mensaje de bienvenida ya existe
+            //     const welcomeMessageExists = Array.from(chatMessages.children).some(
+            //         (child) => child.className === "chat-message bot" && child.innerHTML === welcomeMessage
+            //     );
 
-                if (!welcomeMessageExists) {
-                    console.log('mensaje no existe de bienvenida')
-                    // Si no existe, agregar el mensaje de bienvenida
-                    const newMessage = document.createElement("div");
-                    newMessage.className = "chat-message bot";
-                    newMessage.innerHTML = welcomeMessage;
-                    chatMessages.appendChild(newMessage);
-                }else{
-                    console.log('mensaje SI existe de bienvenida')
-                    // Si no existe, agregar el mensaje de bienvenida
-                    const newMessage = document.createElement("div");
-                    newMessage.className = "chat-message bot";
-                    newMessage.innerHTML = "";
-                    //chatMessages.appendChild(newMessage);
+            //     if (!welcomeMessageExists) {
+            //         console.log('mensaje no existe de bienvenida')
+            //         // Si no existe, agregar el mensaje de bienvenida
+            //         const newMessage = document.createElement("div");
+            //         newMessage.className = "chat-message bot";
+            //         newMessage.innerHTML = welcomeMessage;
+            //         chatMessages.appendChild(newMessage);
+            //     }else{
+            //         console.log('mensaje SI existe de bienvenida')
+            //         // Si no existe, agregar el mensaje de bienvenida
+            //         const newMessage = document.createElement("div");
+            //         newMessage.className = "chat-message bot";
+            //         newMessage.innerHTML = "";
+            //         //chatMessages.appendChild(newMessage);
+            //     }
+
+            // }
+            if (!chatWidget.classList.contains("active")) {
+                chatWidget.classList.add("active");
+                      // Mostrar indicador de escritura al abrir el widget
+                      
+                
+                // Si se proporciona un mensaje de bienvenida, se muestra
+                if (welcomeMessage) {
+                    console.log('welcome message and block');
+        
+                    const welcomeMessageExists = Array.from(chatMessages.children).some(
+                        (child) => child.className === "chat-message bot" && child.innerHTML === welcomeMessage
+                    );
+        
+                    if (!welcomeMessageExists) {
+                        
+        
+                        const newMessage = document.createElement("div");
+                        newMessage.className = "chat-message bot";
+                        newMessage.innerHTML = welcomeMessage;
+                        chatMessages.appendChild(newMessage);
+            
+                        console.log('Mensaje de bienvenida agregado');
+        
+                        
+        
+        
+                    } else {
+                        console.log('mensaje SI existe de bienvenida');
+                        
+                        
+                        // Si no existe, agregar el mensaje de bienvenida
+                        const newMessage = document.createElement("div");
+                        newMessage.className = "chat-message bot";
+                        newMessage.innerHTML = "";
+                  
+                    }
                 }
-
+            } else {
+                chatWidget.classList.remove("active");
             }
+            
         }
     }
 

@@ -16,9 +16,6 @@ function lanzarchat() {
         newMessage.innerHTML = welcomeMessage;
 
 
-
-
-
         chatMessages.appendChild(newMessage);
     } else {
         console.error("El chatbot no está inicializado correctamente.");
@@ -104,7 +101,6 @@ function handlePruebaResponse(isYes) {
 
 
 document.addEventListener("DOMContentLoaded", function () {
-
 
 
 
@@ -205,23 +201,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 body: JSON.stringify({ 
                     user_input: userMessage,
                     session_id: sessionId    // Agregar session_id
+                    
 
                 }),
             })
                 .then((response) => response.json())
                 .then((data) => {
-                    // Mostrar la respuesta del chatbot
-                    // function renderContent(content) {
-                    //     // Expresión regular para detectar URLs con extensiones de imágenes
-                    //     const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))/gi;
-                    //     // Reemplaza URLs de imágenes con etiquetas <img>
-                    //     return content.replace(imageRegex, (url) => {
-                    //         return `<img src="${url}" alt="Imagen asociada" style="max-width: 100%; height: auto;" />`;
-                    //     });
-                    // }
-
-                    //const renderedContent = renderContent(data.assistant_response);
-
                         // Verificar si la respuesta contiene assistant_response
                         if (data && data.assistant_response) {
 

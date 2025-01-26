@@ -1,0 +1,22 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class AlterPromptColumnInPromptsTable extends Migration
+{
+    public function up()
+    {
+        Schema::table('assistants', function (Blueprint $table) {
+            $table->longText('prompt')->change(); // Cambia el tipo a LONGTEXT
+        });
+    }
+
+    public function down()
+    {
+        Schema::table('assistants', function (Blueprint $table) {
+            $table->text('prompt')->change(); // Revertir a TEXT si es necesario
+        });
+    }
+}

@@ -18,6 +18,8 @@
                 <option value="curso">Curso</option>
                 <option value="producto">Producto</option>
                 <option value="servicio">Servicio</option>
+                <option value="base_de_datos">Base de Datos</option>
+
                 </select>
             </div>
 

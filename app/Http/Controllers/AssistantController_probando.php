@@ -497,13 +497,12 @@ public function publicGenerateResponse_old(Request $request, $id)
 public function publicGenerateResponse(Request $request, $id)
 {
 
- //   Log::info('En el nuevo publicGenerateResponse');
+   //   Log::info('En el nuevo publicGenerateResponse');
     // Obtener el asistente con el ID proporcionado
     $assistant = Assistant::findOrFail($id);
 
     // Obtener el tipo de asistente (curso, producto, servicio)
     $type = $assistant->type;
-    Log::info("Type". $type);
 
     $model = DB::table('assistants')
     ->join('a_i_models', 'assistants.model_id', '=', 'a_i_models.id')
@@ -525,22 +524,11 @@ public function publicGenerateResponse(Request $request, $id)
     // Procesar la solicitud de acuerdo al tipo de asistente
     $response = '';
 
-    $generatedText='Texto generado por la IA';
+    $generatedText='Texto generado por la IA?????';
 
     $totalTokens=0;
 
-    if (strpos($user_input, 'hablar') !== false || strpos($user_input, 'WhatsApp') !== false ) {
-        // Reemplazar el enlace de texto plano con el botón HTML
-        $whatsappLink = "https://wa.me/{$assistant->whatsapp_number}?text=Hola,%20quiero%20hablar%20con%20un%20asesor.";
 
-        $generatedText= "<p>Si deseas hablar con un asesor, puedes contactarnos a través de WhatsApp:</p>
-                         <a href='{$whatsappLink}'?text=Holass,%20quiero%20hablar%20con%20un%20asesor' target='_blank'>
-                             <button style='padding: 10px 20px; background-color: #25d366; color: white; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center;'>
-                                 <i class='fab fa-whatsapp' style='margin-right: 10px; font-size: 24px;'></i>
-                                 Hablar con un asesor
-                             </button>
-                         </a>";
-    }else{
 
         switch ($type) {
             case 'curso':
@@ -556,21 +544,16 @@ public function publicGenerateResponse(Request $request, $id)
     
             case 'servicio':
                 // Lógica personalizada para el tipo 'servicio'
-                $generatedText = $this->generateServiceResponse($assistant, $request);
-                break;
+                $generatedText= $this->generateServiceResponse($assistant, $request);
+                Log::info('respuesta generada:::::'.$generatedText);
 
-            case 'base_de_datos':
-                // Lógica personalizada para el tipo 'servicio'
-                $generatedText = $this->generateDBResponse($assistant, $request);
                 break;
-
     
             default:
                 // Caso por defecto si el tipo no es reconocido
                 $response = 'Tipo de asistente no válido.';
                 break;
         }
-
 
     }
     
@@ -643,9 +626,9 @@ public function publicGenerateResponse(Request $request, $id)
         Message::create(['conversation_id' => $conversation->id, 'sender' => 'assistant', 'message' => $generatedText]);
 
 
-    $coursesession = session('course_name');
+$coursesession = session('course_name');
 
-    if($coursesession){
+if($coursesession){
     Log::info('CourseName in session:'.$coursesession->id );
     Log::info('CourseName in session:'.session('course_name')->id );
 
@@ -664,7 +647,7 @@ public function publicGenerateResponse(Request $request, $id)
 
 private function generateCourseResponse($assistant, $request)
 {
-    Log::info('assistant:->'.$assistant);
+Log::info('assistant:->'.$assistant);
 
     $prompt=$assistant->prompt;
 
@@ -673,14 +656,14 @@ private function generateCourseResponse($assistant, $request)
 }
 
 private function generateOpenAIResponse($prompt , $mensaje)
-    {
-        //  Log::info('En funcion generateOpenAIResponse');
+{
+  //  Log::info('En funcion generateOpenAIResponse');
 
-        $prompt.='Tu tarea es responder acerca de los cursos que brindamos';
+    $prompt.='Tu tarea es responder acerca de los cursos que brindamos';
 
 
 
-        $prompt .= "Responde de manera cordial, clara y estructurada. Usa Markdown para formatear tus respuestas:
+    $prompt .= "Responde de manera cordial, clara y estructurada. Usa Markdown para formatear tus respuestas:
         - Listas para enumeraciones.
         - Negrillas para destacar palabras importantes.
         - Títulos y subtítulos si es necesario.
@@ -689,28 +672,29 @@ private function generateOpenAIResponse($prompt , $mensaje)
         ";
 
 
-        // Obtener todos los cursos de la base de datos
-        $courses = Course::all();  // Asegúrate de tener el modelo Course importado
+    // Obtener todos los cursos de la base de datos
+    $courses = Course::all();  // Asegúrate de tener el modelo Course importado
 
 
-        // Crear una lista de cursos para pasar al modelo
-        $coursesList = $courses->map(function($course) {
-            return $course->title;  // Solo los títulos de los cursos, o agrega más información según lo necesites
-        });
+    // Crear una lista de cursos para pasar al modelo
+    $coursesList = $courses->map(function($course) {
+        return $course->title;  // Solo los títulos de los cursos, o agrega más información según lo necesites
+    });
 
-        $coursesListText = implode(', ', $coursesList->toArray());  // Convertir la lista a un string
+    $coursesListText = implode(', ', $coursesList->toArray());  // Convertir la lista a un string
 
 
-        // Mensaje enviado por el usuario
+     // Mensaje enviado por el usuario
 
-        Log::info('El mensaje es :'.$mensaje);
-        $detectedCourse = $this->detectCourseQuery($mensaje); // Buscar si mencionan un curso
-        Log::info('detectedCourse es:'.$detectedCourse);
+    Log::info('El mensaje es :'.$mensaje);
+    $detectedCourse = $this->detectCourseQuery($mensaje); // Buscar si mencionan un curso
+    Log::info('detectedCourse es:'.$detectedCourse);
 
-   
-        if ($detectedCourse != optional(session('course_name'))->id && optional(session('course_name'))->id !== null) {
+    //    if ($detectedCourse || $coursesession) {
+
+    if ($detectedCourse != optional(session('course_name'))->id && optional(session('course_name'))->id !== null) {
         $detectedCourse = session('course_name');
-        }
+    }
 
 
     if ($detectedCourse)   {
@@ -770,7 +754,6 @@ private function generateOpenAIResponse($prompt , $mensaje)
         ]
     ]);
 
-    Log::info("holaholahola hola mensaje",$messages);
 
     $openAIResponse = Http::withToken(config('services.openai.api_key'))
     ->post('https://api.openai.com/v1/chat/completions', [
@@ -785,9 +768,11 @@ private function generateOpenAIResponse($prompt , $mensaje)
 
     if ($openAIResponse->successful()) {
         Log::info('Pasando por aquiiiii.... en openairepsonse');
-        $responseData = $openAIResponse->json();
+    $responseData = $openAIResponse->json();
 
-        $generatedText = $responseData['choices'][0]['message']['content'];
+    $generatedText = $responseData['choices'][0]['message']['content'];
+
+
 
 
         // Formatear el texto generado
@@ -830,237 +815,24 @@ private function generateOpenAIResponse($prompt , $mensaje)
     return $generatedText;
 }
 
-
-private function detectCourseQuery($message) {
-    // Buscar un curso cuyo título o categoría coincida con el mensaje del usuario
-    Log::info('Estamos buscando si habla de algun curso en el mensaje: '.$message);
-    $courses = Course::all(); // Traer todos los cursos de la base de datos
-    $bestMatch = null;
-    $highestScore = 0;
-
-    foreach ($courses as $course) {
-        // Calcular la similitud entre el mensaje del usuario y el título del curso
-        similar_text(strtolower($message), strtolower($course->title), $percentage);
-
-        // Si el porcentaje es mayor que el puntaje más alto encontrado hasta ahora, actualizamos
-        if ($percentage > $highestScore) {
-            $highestScore = $percentage;
-            $bestMatch = $course;
-        }
-    }
-
-    // Retornar el curso con mayor similitud si supera un umbral razonable
-    return $highestScore > 40 ? $bestMatch : null; // 40% es un umbral inicial, ajústalo según tus necesidades
-
-}
-
-// Generar respuesta para producto
-private function generateProductResponse($assistant, $request)
-{
-    // Aquí puedes implementar la lógica para generar una respuesta
-    // Ejemplo: consultar detalles del producto y generar la respuesta
-    $productInfo = "Detalles del producto: " . $assistant->info;
-    // Generación de respuesta personalizada
-    return "Generando respuesta para producto: " . $productInfo;
-}
-
-private function generateDBResponse($assistant, $request)
-{
-   // Log::info('assistant:->'.$assistant);
-
-    $prompt=$assistant->prompt;
-
-    return $this->generateOpenAIResponse_DB($prompt,$request->user_input);
-}
-
-private function generateOpenAIResponse_DB($prompt , $mensaje)
-{
-        $generatedText='';
-        Log::info('En funcion generateOpenAIResponse programming');
-
-        $prompt.='Eres un asistente que da informacion sobre las bases de datos y tambien grficas y estadisticas acerca de las consultas';
-
-
-
-        $instruction = [
-            [
-                "role" => "system", 
-                "content" => $prompt
-                
-                ]
-        ];
-// Iniciar sesión para almacenar el historial (si aún no está iniciada)
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Crear o recuperar el historial desde la sesión
-if (!isset($_SESSION['chat_history'])) {
-    $_SESSION['chat_history'] = []; // Inicializar historial si no existe
-}
-
-// Limitar el historial a los últimos 20 mensajes
-if (count($_SESSION['chat_history']) > 20) {
-    $_SESSION['chat_history'] = array_slice($_SESSION['chat_history'], -20);
-}
-
-// Agregar el mensaje actual del usuario al historial
-$_SESSION['chat_history'][] = [
-    'role' => 'user',
-    'content' => $mensaje
-];
-
-// Verificar si el mensaje contiene palabras clave relacionadas con ventas
-$keywords = ['venta', 'producto', 'precio', 'cliente', 'total'];
-$containsSalesQuery = false;
-foreach ($keywords as $keyword) {
-    if (stripos($mensaje, $keyword) !== false) {
-        Log::info("El usuario está pidiendo información sobre las ventas.");
-        $containsSalesQuery = true;
-        break;
-    }
-}
-
-// Si es una consulta relacionada con ventas, agregar información adicional
-if ($containsSalesQuery) {
-    // Consultar la base de datos secundaria
-    $ventas = DB::connection('mysql2')->table('ventas')->get();
-
-    // Crear un mensaje con las estadísticas de ventas
-    $salesInfo = "Aquí están algunas ventas recientes:\n";
-    $salesInfo = "Aquí tienes un resumen de las ventas:\n";
-    $salesInfo .= "| Cliente          | Producto                            | Precio unitario | Fecha Venta | Cantidad | Subtotal |\n";
-    $salesInfo .= "|------------------|-------------------------------------|-----------------|-------------|----------|----------|\n";
-
-    foreach ($ventas as $venta) {
-        $salesInfo .= "Cliente: {$venta->cliente_nombre}, Producto: {$venta->producto}, Precio unitario: {$venta->precio_unitario}, Fecha Venta: {$venta->fecha_venta},Cantidad: {$venta->cantidad}, SubTotal: {$venta->total}\n";
-    }
-
-    // Agregar información de ventas al historial
-    $_SESSION['chat_history'][] = [
-        'role' => 'assistant',
-        'content' => $salesInfo
-    ];
-}
-
-// Combinar el historial con las instrucciones iniciales
-$messages = array_merge($instruction, $_SESSION['chat_history']);
-
-// Registrar el historial en los logs para depuración
-Log::info("Historial actual:", $messages);
-
-
-
-// Llamar a la API de OpenAI
-$openAIResponse = Http::withToken(config('services.openai.api_key'))
-    ->post('https://api.openai.com/v1/chat/completions', [
-        'model' => 'gpt-3.5-turbo',
-        'messages' => $messages,
-        'max_tokens' => 4096,
-        'temperature' => 0.1,
-    ]);
-
-// Manejar la respuesta de OpenAI
-if ($openAIResponse->successful()) {
-    $responseContent = $openAIResponse->json();
-    Log::info("Respuesta de OpenAI:", $responseContent);
-
-    // Agregar la respuesta al historial
-    $_SESSION['chat_history'][] = [
-        'role' => 'assistant',
-        'content' => $responseContent['choices'][0]['message']['content']
-    ];
-
-    // Retornar la respuesta generada por el modelo
-    return $responseContent['choices'][0]['message']['content'];
-    //  $generatedText='**Probando markdown**';
-      //return $generatedText;
-} else {
-    // Manejar errores en la llamada a la API
-    Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-    return response()->json(['error' => 'Error al generar la respuesta.'], 500);
-}
-
-// Manejar la respuesta de OpenAI
-if ($openAIResponse->successful()) {
-    $responseContent = $openAIResponse->json();
-    Log::info("Respuesta de OpenAI:", $responseContent);
-
-    // Retornar la respuesta generada por el modelo
-    return $responseContent['choices'][0]['message']['content'];
-} else {
-    // Manejar errores en la llamada a la API
-    Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-    return response()->json(['error' => 'Error al generar la respuesta.'], 500);
-}
-
-
-
-
-
-       
-
-
-        if ($openAIResponse->successful()) {
-            Log::info('Pasando por aquiiiii.... en openairepsonse');
-        $responseData = $openAIResponse->json();
-        $generatedText = $responseData['choices'][0]['message']['content'];
-        // Formatear el texto generado
-        $generatedText = nl2br($generatedText); // Convertir saltos de línea a <br>
-        $generatedText = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $generatedText);
-
-        // Convertir los encabezados en <h6>
-        $generatedText = preg_replace('/^### (.+)/m', '<h6>$1</h6>', $generatedText);
-
-        // Convertir las listas con guion (-) en elementos <li>
-        $generatedText = preg_replace('/^- (.+)/m', '<li>$1</li>', $generatedText);
-
-        // Envolver las listas en <ul> solo si hay elementos <li>
-        if (strpos($generatedText, '<li>') !== false) {
-            // Envolver solo el contenido de la lista en un <ul>
-            $generatedText = preg_replace('/(<li>.*?<\/li>)/s', '<ul>$0</ul>', $generatedText);
-        }
-
-        // Procesar las imágenes
-        $generatedText = preg_replace_callback(
-            '/!\[(.*?)\]\((https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))\)/i',
-            function ($matches) {
-                return '<img src="' . htmlspecialchars($matches[2]) . '" alt="' . htmlspecialchars($matches[1]) . '" style="max-width:100%; height:auto;" />';
-            },
-            $generatedText
-        );
-        }else{
-            Log::info("openAIResponse No fue succefuls");
-        }
-
-
-       // Log::info('URL de la imagen generada: ' . $imageUrl);
-        Log::info('texto generado: ' . $generatedText);
-        //return response()->json(['content' => $generatedText]);
-
-
-     //   $generatedText='**Probando markdown**';
-        return $generatedText;
-        
-}
-
-
 // Generar respuesta para servicio
 private function generateServiceResponse($assistant, $request)
 {
-   // Log::info('assistant:->'.$assistant);
+    // return "Generando respuesta para servicio: " . $serviceInfo;
+
+    //Log::info('assistant:->'.$assistant);
 
     $prompt=$assistant->prompt;
 
     return $this->generateOpenAIResponse_programming($prompt,$request->user_input);
+
 }
 
 private function generateOpenAIResponse_programming($prompt , $mensaje)
 {
-        $generatedText='';
-        Log::info('En funcion generateOpenAIResponse programming');
+    Log::info('En funcion generateOpenAIResponse programming');
 
-        $prompt.='Eres un experto desarrollador senior de software que ayuda a desarrollar programas y apps de manera rapida y sencilla, a la vez que los programas que desarrollas son sumamente exitosos';
+        $prompt.='Eres un experto desarrollador de software senior. Experto en flutter, laravel, php , sql server, java script entre otros. Das las respuestas optimizadas y claras con codigo limpio y bien explicado';
 
 
 
@@ -1080,14 +852,12 @@ private function generateOpenAIResponse_programming($prompt , $mensaje)
             ]
         ]);
 
-        Log::info("elmensaje es:",$messages);
-
 
         $openAIResponse = Http::withToken(config('services.openai.api_key'))
         ->post('https://api.openai.com/v1/chat/completions', [
             'model' => 'gpt-3.5-turbo',
             'messages' => $messages,
-            'max_tokens' => 4096,
+            'max_tokens' => 5000,
             'temperature' => 0.1,
         ]);
 
@@ -1122,8 +892,6 @@ private function generateOpenAIResponse_programming($prompt , $mensaje)
             },
             $generatedText
         );
-        }else{
-            Log::info("openAIResponse No fue succefuls");
         }
 
 
@@ -1136,6 +904,42 @@ private function generateOpenAIResponse_programming($prompt , $mensaje)
         
 }
 
+
+
+
+
+// Generar respuesta para producto
+private function generateProductResponse($assistant, $request)
+{
+    // Aquí puedes implementar la lógica para generar una respuesta
+    // Ejemplo: consultar detalles del producto y generar la respuesta
+    $productInfo = "Detalles del producto: " . $assistant->info;
+    // Generación de respuesta personalizada
+    return "Generando respuesta para producto: " . $productInfo;
+}
+
+private function detectCourseQuery($message) {
+    // Buscar un curso cuyo título o categoría coincida con el mensaje del usuario
+    Log::info('Estamos buscando si habla de algun curso en el mensaje: '.$message);
+    $courses = Course::all(); // Traer todos los cursos de la base de datos
+    $bestMatch = null;
+    $highestScore = 0;
+
+    foreach ($courses as $course) {
+        // Calcular la similitud entre el mensaje del usuario y el título del curso
+        similar_text(strtolower($message), strtolower($course->title), $percentage);
+
+        // Si el porcentaje es mayor que el puntaje más alto encontrado hasta ahora, actualizamos
+        if ($percentage > $highestScore) {
+            $highestScore = $percentage;
+            $bestMatch = $course;
+        }
+    }
+
+    // Retornar el curso con mayor similitud si supera un umbral razonable
+    return $highestScore > 40 ? $bestMatch : null; // 40% es un umbral inicial, ajústalo según tus necesidades
+
+}
 
 
 public function uploadDocument(Request $request, $assistant)

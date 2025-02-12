@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", function () {
         whatsappButton.style.borderRadius = "5px";
         whatsappButton.style.cursor = "pointer";
         whatsappButton.onclick = () => {
-            window.open("https://wa.me/1234567890?text=¡Hola! Estoy interesado en la prueba gratuita.", "_blank");
+            window.open("https://wa.me/51983269818?text=¡Hola! Estoy interesado en la prueba gratuita.", "_blank");
         };
 
         chatMessages.appendChild(whatsappButton);

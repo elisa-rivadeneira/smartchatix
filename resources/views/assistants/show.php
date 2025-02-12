@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="container">
-        <h1>Detalles del Asistente</h1>
+        <h1>Detalles del Asistente_</h1>
         <p><strong>Nombre:</strong> {{ $assistant->nombre_asistente }}</p>
         <p><strong>Información:</strong> {{ $assistant->informacion }}</p>
         
@@ -12,7 +12,7 @@
             @foreach($chatHistories as $chat)
                 <div class="mb-2">
                     <p><strong>Usuario:</strong> {{ $chat->user_message }}</p>
-                    <p><strong>Asistenteee:</strong> {{ $chat->assistant_response }}</p>
+                    <p><strong>Asistenteee:</strong><span class="assistant-response">{!! $chat->assistant_response !!}</span></p>
                     <hr>
                 </div>
             @endforeach
@@ -31,15 +31,21 @@
 @endsection
 
 @section('js')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <script>
+        // Convertir el contenido Markdown a HTML cuando se cargue la página
+        document.querySelectorAll('.assistant-response').forEach(function (element) {
+            element.innerHTML = marked(element.innerHTML);
+        });
+
+        // Usar AJAX para enviar el formulario
         $(document).ready(function() {
- 
             console.log("El script de JavaScript se ha cargado correctamente");
 
             $('#chat-form').on('submit', function(event) {
                 event.preventDefault(); // Evitar el envío tradicional del formulario
-                console.log("Formulario enviado vía AJAX"); // Verifica en la consola del navegador
+                console.log("Formulario enviado vía AJAX");
 
                 let userInput = $('#user_input').val();
                 
@@ -54,15 +60,23 @@
                     success: function(response) {
                         // Limpiar el campo de entrada
                         $('#user_input').val('');
-                        
+
+                        // Convertir la respuesta del asistente (en Markdown) a HTML
+                        var assistantResponseHtml = marked(response.assistant_response);
+
                         // Agregar la nueva interacción al historial de chat
                         $('#chat-history').append(
                             '<div class="mb-2">' +
                                 '<p><strong>Usuario:</strong> ' + response.user_message + '</p>' +
-                                '<p><strong>Asistentee_e_e:</strong> ' + response.assistant_response + '</p>' +
+                                '<p><strong>Asistenteee:</strong><span class="assistant-response">' + assistantResponseHtml + '</span></p>' +
                                 '<hr>' +
                             '</div>'
                         );
+
+                        // Volver a procesar el Markdown para las respuestas nuevas agregadas
+                        document.querySelectorAll('.assistant-response').forEach(function (element) {
+                            element.innerHTML = marked(element.innerHTML);
+                        });
                     },
                     error: function(xhr) {
                         console.log('Error:', xhr);

@@ -666,6 +666,9 @@ footer a:hover {
                         <li class="nav-item">
                             <a class="nav-link" href="#features">Características</a>
                         </li>
+                          <li class="nav-item">
+                            <a class="nav-link" href="elixa_english">Elixa English</a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#integracion">Integracion a tus Sistemas</a>
                         </li>

@@ -84,7 +84,7 @@ function handlePruebaResponse(isYes) {
         const messageYes = document.createElement("div");
         messageYes.className = "chat-message bot";
         messageYes.innerHTML =
-            "¡Genial! Para solicitar tu prueba gratuita, por favor contáctanos vía WhatsApp haciendo clic <a href='https://wa.me/1234567890' target='_blank'>aquí</a>.";
+            "¡Genial! Para solicitar tu prueba gratuita, por favor contáctanos vía WhatsApp haciendo clic <a href='https://wa.me/51983269818' target='_blank'>aquí</a>.";
         chatMessages.appendChild(messageYes);
     } else {
         const messageNo = document.createElement("div");
@@ -351,7 +351,7 @@ function toggleChatWidget(chatWidget, welcomeMessage) {
         whatsappButton.style.borderRadius = "5px";
         whatsappButton.style.cursor = "pointer";
         whatsappButton.onclick = () => {
-            window.open("https://wa.me/1234567890?text=¡Hola! Estoy interesado en la prueba gratuita.", "_blank");
+            window.open("https://wa.me/51983269818?text=¡Hola! Estoy interesado en la prueba gratuita.", "_blank");
         };
 
         chatMessages.appendChild(whatsappButton);

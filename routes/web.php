@@ -17,6 +17,20 @@ Route::get('/', function () {
     return view('landing');
 });
 
+Route::get('/elixa_english', function () {
+    return view('elixa');
+});
+
+Route::get('/politica_privacidad_elixa_english', function () {
+    return view('politica_privacidad_elixa_english');
+});
+
+Route::get('/condiciones_servicio_elixa_english', function () {
+    return view('condiciones_servicio_elixa_english');
+});
+
+
+
 // Route::get('/register', function () {
 //     return view('landing');
 // });

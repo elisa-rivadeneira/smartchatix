@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     label: "Sí, hablar con un humano",
                     action: () => {
                         window.open(
-                            `https://wa.me/1234567890?text=¡Hola! Estoy interesado en el ${planName} y quiero más información.`,
+                            `https://wa.me/51983269818?text=¡Hola! Estoy interesado en el ${planName} y quiero más información.`,
                             "_blank"
                         );
                     },

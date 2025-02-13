@@ -557,11 +557,14 @@ public function publicGenerateResponse(Request $request, $id)
                 $response = $this->generateProductResponse($assistant, $request);
                 break;
     
+            case 'developer':
+                // Lógica personalizada para el tipo 'developer'
+                $generatedText = $this->generateDeveloperResponse($assistant, $request);
+                break;
             case 'servicio':
                 // Lógica personalizada para el tipo 'servicio'
                 $generatedText = $this->generateServiceResponse($assistant, $request);
                 break;
-
             case 'base_de_datos':
                 // Lógica personalizada para el tipo 'servicio'
                 $generatedText = $this->generateDBResponse($assistant, $request);
@@ -866,6 +869,138 @@ private function generateProductResponse($assistant, $request)
     // Generación de respuesta personalizada
     return "Generando respuesta para producto: " . $productInfo;
 }
+private function generateServiceResponse($assistant, $request)
+{
+    $prompt=$assistant->prompt;
+    return $this->generateOpenAIResponse_Service($prompt,$request->user_input);
+}
+
+
+private function generateOpenAIResponse_Service($prompt , $mensaje)
+
+{
+        $generatedText='';
+        Log::info('En funcion generateOpenAIResponse programming');
+
+       $prompt.='Atiendes a los clientes de manera atenta y cordial, invitandolos a probar nuestros servicios. Asi mismo das respuestas cortas maximo de 50 palabras para que el cliente pueda leer las respuestas rapidamente. Siempre da una pregunta despues de explicar algo para invitar al cliente a tomar accion o seguir preguntando algo mas. Solo da una pregunta nada mas, no des mas de una pregunta';
+
+
+
+        // Iniciar sesión para almacenar el historial (si aún no está iniciada)
+            if (session_status() == PHP_SESSION_NONE) {
+                session_start();
+            }
+
+            // Crear o recuperar el historial desde la sesión
+            if (!isset($_SESSION['chat_history'])) {
+                $_SESSION['chat_history'] = []; // Inicializar historial si no existe
+            }
+
+            // Limitar el historial a los últimos 20 mensajes
+            if (count($_SESSION['chat_history']) > 20) {
+                $_SESSION['chat_history'] = array_slice($_SESSION['chat_history'], -20);
+            }
+
+            // Agregar el mensaje actual del usuario al historial
+            $_SESSION['chat_history'][] = [
+                'role' => 'user',
+                'content' => $mensaje
+            ];
+
+        $instruction = [
+            [
+                "role" => "system", 
+                "content" => $prompt
+                
+                ]
+        ];
+
+        // Combinar el historial con las instrucciones iniciales
+        $messages = array_merge($instruction, $_SESSION['chat_history']);
+
+        // Agregar el mensaje del usuario al prompt
+        // $messages = array_merge($instruction, [
+        //     [
+        //         'role' => 'user', 
+        //         'content' => $mensaje
+        //     ]
+        // ]);
+
+        Log::info("elmensaje es:",$messages);
+
+
+        $openAIResponse = Http::withToken(config('services.openai.api_key'))
+        ->post('https://api.openai.com/v1/chat/completions', [
+            'model' => 'gpt-3.5-turbo',
+            'messages' => $messages,
+            'max_tokens' => 4096,
+            'temperature' => 0.1,
+        ]);
+
+         Log::info('Tlinea 1134 ' );
+
+
+        if ($openAIResponse->successful()) {
+            Log::info('Pasando por aquí.... en openAI response');
+            $responseData = $openAIResponse->json();
+            $generatedText = $responseData['choices'][0]['message']['content'];
+
+            // Dividir el texto en partes: texto normal y bloques de código
+            $codeBlocks = [];
+            $generatedText = preg_replace_callback('/```(.*?)```/s', function ($matches) use (&$codeBlocks) {
+                // Almacenar los bloques de código
+                $codeBlocks[] = $matches[1]; // Guardamos solo el código
+                return '{{CODE_' . (count($codeBlocks) - 1) . '}}'; // Reemplazamos por un marcador único
+            }, $generatedText);
+
+            // Procesar el texto normal (Markdown)
+            $generatedText = nl2br($generatedText); // Convertir saltos de línea a <br>
+            $generatedText = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $generatedText); // Negrita
+            $generatedText = preg_replace('/^### (.+)/m', '<h6>$1</h6>', $generatedText); // Encabezados
+            $generatedText = preg_replace('/^- (.+)/m', '<li>$1</li>', $generatedText); // Listas
+
+            // Envolver listas en <ul>
+            if (strpos($generatedText, '<li>') !== false) {
+                $generatedText = preg_replace('/(<li>.*?<\/li>)/s', '<ul>$0</ul>', $generatedText);
+            }
+
+            // Procesar imágenes
+            $generatedText = preg_replace_callback(
+                '/!\[(.*?)\]\((https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))\)/i',
+                function ($matches) {
+                    return '<img src="' . htmlspecialchars($matches[2]) . '" alt="' . htmlspecialchars($matches[1]) . '" style="max-width:100%; height:auto;" />';
+                },
+                $generatedText
+            );
+
+            // Reemplazar los marcadores {{CODE_X}} por los bloques de código resaltados
+            foreach ($codeBlocks as $index => $code) {
+                $highlightedCode = '<pre><code class="php">' . htmlspecialchars($code) . '</code></pre>';
+                // Reemplazar el marcador por el código resaltado
+                $generatedText = preg_replace('/{{CODE_' . $index . '}}/', $highlightedCode, $generatedText);
+            }
+
+
+              Log::info('Texto generado Limea 1178__________________');
+              Log::info('Texto generado Limea 1179__________________' .$generatedText);
+
+
+            // Finalmente, devolver el texto procesado
+
+        } else {
+            Log::info("openAIResponse No fue successful");
+        }
+
+        // Log para verificar el texto generado
+        Log::info('Texto generado_____________________: ' . $generatedText);
+
+       // Log::info('Texto generado-M_M_M_:', ['generatedText' => $generatedText]);
+
+                return $generatedText;
+              //  return response()->json(['generatedText' => $generatedText]);
+
+        }
+
 
 private function generateDBResponse($assistant, $request)
 {
@@ -920,65 +1055,39 @@ $_SESSION['chat_history'][] = [
 // Verificar si el mensaje contiene palabras clave para enviar email
 // Limpiar y normalizar mensaje
 // Normalizar mensaje antes de analizarlo
-$mensajeLimpio = strtolower(trim($mensaje));
-$mensajeLimpio = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $mensajeLimpio);
-
-// 🔹 Lista de palabras clave para email
-$keywordsEmail = [
-    'envia', 'email', 'correo', 'mandar', 'mensaje', 'contactar',
-    'mándale', 'notificar', 'avísale', 'remitir', 'comunicar'
-];
-Log::info("✅ Pasando por linea 926");
 
 
-// 🔹 Lista de palabras clave para ventas
-$keywordsVentas = [
-    'venta', 'producto', 'precio', 'cliente', 'total', 'factura', 'cotización', 'pedido', 'compras'
-];
-Log::info("✅ Pasando por linea 933");
+    Log::info("🔍 Entrara por aqui si o noooo ?");
 
 
-$sendemail = false;
-$containsSalesQuery = false;
+$response = Http::post('http://127.0.0.1:5001/analizar', ['mensaje' => $mensaje]);
+$responseData = $response->json();
 
-// 📌 Búsqueda más flexible en el mensaje
-foreach ($keywordsEmail as $keyword) {
-            Log::info("✅ Pasando por keywords de email");
+$intencion     = $responseData['intencion'] ?? null;
+$destinatario  = $responseData['destinatario'] ?? null;
+$contenido     = $responseData['contenido'] ?? null;
 
-    if (stripos($mensajeLimpio, $keyword) !== false) {
-        Log::info("✅ Se detectó una intención de EMAIL: " . $mensajeLimpio);
-        $sendemail = true;
-        break;
-    }
-}
+  Log::info("🔍 Intencionnnnnnn: " . $intencion);
 
-foreach ($keywordsVentas as $keyword) {
-    if (stripos($mensajeLimpio, $keyword) !== false) {
-        Log::info("✅ Se detectó una intención de CONSULTA DE VENTAS: " . $mensajeLimpio);
-        $containsSalesQuery = true;
-        break;
-    }
-}
+  $clientes = DB::connection('mysql2')->table('clientes')->get();
+Log::info("🔍 Clientes en la base de datos: " . json_encode($clientes));
 
 
+if ($intencion === 'email' && !empty($destinatario) && !empty($contenido)) {
+    Log::info("✅ Se detectó intención de email, llamando a procesarEnvioEmail()");
+
+    Log::info("🔍 Flask detectó intención: " . $intencion);
+    Log::info("📩 Destinatario detectado: " . $destinatario);
+    Log::info("✉️ Contenido del email: " . $contenido);
+
+    // Llama a la función que se encarga de enviar el email usando los datos extraídos
 
 
+  // Extraer los valores dinámicamente por nombre de grupo
+    $nombreCliente = $destinatario;
+    $mensajeEmail = $contenido;
 
 
-
-// Si es una consulta relacionada con ventas, agregar información adicional
-if ($sendemail) {
-            Log::info("✅ estamos en linea 966 para enviar un email");
-
-// Extraer el nombre del cliente y el mensaje con una expresión regular
-$pattern = '/envia (?:un )?(?:email|correo|mensaje) a (?P<destinatario>.+?) (?:con|y) (?:el )?(?:mensaje|texto|contenido)?:? (?P<mensaje>.+)/i';
-
-if (preg_match($pattern, $mensaje, $matches)) {
-    Log::info("✅ Expresión regular exitosa. Resultado: " . json_encode($matches));
-
-    // Extraer los valores dinámicamente por nombre de grupo
-    $nombreCliente = trim($matches['destinatario']);
-    $mensajeEmail = trim($matches['mensaje']);
 
     Log::info("📩 Cliente: " . $nombreCliente . " | Mensaje: " . $mensajeEmail);
 
@@ -991,13 +1100,21 @@ if (preg_match($pattern, $mensaje, $matches)) {
 
     // Ahora puedes procesar el envío del email
     return $this->enviarEmailCliente($cliente->id, $mensajeEmail);
-} else {
-    Log::info("⚠ No se encontró coincidencia en el mensaje: " . $mensaje);
+
+} elseif ($intencion === 'saludo') {
+    Log::info("👋 Se detectó un saludo.");
+    return "👋 ¡Hola! ¿En qué puedo ayudarte hoy?";
+}
+elseif ($intencion === 'clientes') {
+    Log::info("👋 Detecto clientes.");
+  //  return "👋 ¡Hola! ¿En qué puedo ayudarte hoy?";
 }
 
 
-}else if ($containsSalesQuery) {
-                Log::info("✅ estamos en linea 985 paramostrar la tabla ventas *******");
+
+elseif ($intencion === 'ventas') {
+    Log::info("✅ Se detectó intención de consulta de ventas, llamando a procesarConsultaVentas()");
+                    Log::info("✅ estamos en linea 985 paramostrar la tabla ventas *******");
 
     // Consultar la base de datos secundaria
     $ventas = DB::connection('mysql2')
@@ -1028,73 +1145,74 @@ if (preg_match($pattern, $mensaje, $matches)) {
         'role' => 'assistant',
         'content' => $salesInfo
     ];
-}
-
-// Combinar el historial con las instrucciones iniciales
-$messages = array_merge($instruction, $_SESSION['chat_history']);
-
-// Registrar el historial en los logs para depuración
-Log::info("Historial actual:", $messages);
+        } else {
+            Log::info("⚠ No se detectó una intención válida.");
+        // return "⚠ No entendí tu solicitud. ¿Puedes reformularla?";
+        }
 
 
 
-// Llamar a la API de OpenAI
-$openAIResponse = Http::withToken(config('services.openai.api_key'))
-    ->post('https://api.openai.com/v1/chat/completions', [
-        'model' => 'gpt-3.5-turbo',
-        'messages' => $messages,
-        'max_tokens' => 4096,
-        'temperature' => 0.1,
-    ]);
-
-// Manejar la respuesta de OpenAI
-if ($openAIResponse->successful()) {
-    $responseContent = $openAIResponse->json();
-    Log::info("Respuesta de OpenAI:", $responseContent);
-
-    // Agregar la respuesta al historial
-    $_SESSION['chat_history'][] = [
-        'role' => 'assistant',
-        'content' => $responseContent['choices'][0]['message']['content']
-    ];
-    Log::info('entrega::::::::::: '. $responseContent['choices'][0]['message']['content']);
-
-    // Retornar la respuesta generada por el modelo
-    //return $responseContent['choices'][0]['message']['content'];
-
-        $parsedown = new Parsedown();
-        $htmlContent = $parsedown->text($responseContent['choices'][0]['message']['content']);
-        return $htmlContent;
-
-    //  $generatedText='| Cliente          | Producto                            | Precio unitario | Fecha Venta | Cantidad | Subtotal |
-        // |------------------|-------------------------------------|-----------------|-------------|----------|----------|
-        // | Juan Pérez       | Laptop Dell Inspiron 15             | 2500.00         | 2025-01-01  | 1        | 2500.00  |
-        // | Ana Martínez     | Mouse Logitech MX Master 3         | 300.00          | 2025-01-02  | 2        | 600.00   |
-        // | Carlos Ramírez   | Teclado Mecánico Razer BlackWidow  | 500.00          | 2025-01-03  | 1        | 500.00   |
-        // | Laura López      | Monitor Samsung 27"                 | 1200.00         | 2025-01-04  | 1        | 1200.00  |
-        // | Luis Gutiérrez   | Disco SSD Kingston 1TB              | 350.00          | 2025-01-05  | 3        | 1050.00  |
-        // ';
-//      return $generatedText;
+        $messages = array_merge($instruction, $_SESSION['chat_history']);
 
 
-} else {
-    // Manejar errores en la llamada a la API
-    Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-    return response()->json(['error' => 'Error al generar la respuesta.'], 500);
-}
 
-// Manejar la respuesta de OpenAI
-if ($openAIResponse->successful()) {
-    $responseContent = $openAIResponse->json();
-    Log::info("Respuesta de OpenAI:", $responseContent);
+        // Llamar a la API de OpenAI
+        $openAIResponse = Http::withToken(config('services.openai.api_key'))
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-3.5-turbo',
+                'messages' => $messages,
+                'max_tokens' => 4096,
+                'temperature' => 0.1,
+            ]);
 
-    // Retornar la respuesta generada por el modelo
-    return $responseContent['choices'][0]['message']['content'];
-} else {
-    // Manejar errores en la llamada a la API
-    Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-    return response()->json(['error' => 'Error al generar la respuesta.'], 500);
-}
+            // Manejar la respuesta de OpenAI
+            if ($openAIResponse->successful()) {
+                $responseContent = $openAIResponse->json();
+                Log::info("Respuesta de OpenAI:", $responseContent);
+
+                // Agregar la respuesta al historial
+                $_SESSION['chat_history'][] = [
+                    'role' => 'assistant',
+                    'content' => $responseContent['choices'][0]['message']['content']
+                ];
+                //Log::info('entrega::::::::::: '. $responseContent['choices'][0]['message']['content']);
+
+                // Retornar la respuesta generada por el modelo
+                //return $responseContent['choices'][0]['message']['content'];
+
+                    $parsedown = new Parsedown();
+                    $htmlContent = $parsedown->text($responseContent['choices'][0]['message']['content']);
+                    return $htmlContent;
+
+                //  $generatedText='| Cliente          | Producto                            | Precio unitario | Fecha Venta | Cantidad | Subtotal |
+                    // |------------------|-------------------------------------|-----------------|-------------|----------|----------|
+                    // | Juan Pérez       | Laptop Dell Inspiron 15             | 2500.00         | 2025-01-01  | 1        | 2500.00  |
+                    // | Ana Martínez     | Mouse Logitech MX Master 3         | 300.00          | 2025-01-02  | 2        | 600.00   |
+                    // | Carlos Ramírez   | Teclado Mecánico Razer BlackWidow  | 500.00          | 2025-01-03  | 1        | 500.00   |
+                    // | Laura López      | Monitor Samsung 27"                 | 1200.00         | 2025-01-04  | 1        | 1200.00  |
+                    // | Luis Gutiérrez   | Disco SSD Kingston 1TB              | 350.00          | 2025-01-05  | 3        | 1050.00  |
+                    // ';
+            //      return $generatedText;
+
+
+            } else {
+                // Manejar errores en la llamada a la API
+                Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
+                return response()->json(['error' => 'Error al generar la respuesta.'], 500);
+            }
+
+            // Manejar la respuesta de OpenAI
+            if ($openAIResponse->successful()) {
+                $responseContent = $openAIResponse->json();
+                Log::info("Respuesta de OpenAI:", $responseContent);
+
+                // Retornar la respuesta generada por el modelo
+                return $responseContent['choices'][0]['message']['content'];
+            } else {
+                // Manejar errores en la llamada a la API
+                Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
+                return response()->json(['error' => 'Error al generar la respuesta.'], 500);
+            }
 
 
 
@@ -1104,7 +1222,7 @@ if ($openAIResponse->successful()) {
 
 
         if ($openAIResponse->successful()) {
-            Log::info('Pasando por aquiiiii.... en openairepsonse');
+            Log::info('Pasando por aquiiiii.... en openairesponse');
         $responseData = $openAIResponse->json();
         $generatedText = $responseData['choices'][0]['message']['content'];
         // Formatear el texto generado
@@ -1148,7 +1266,7 @@ if ($openAIResponse->successful()) {
 
 
 // Generar respuesta para servicio
-private function generateServiceResponse($assistant, $request)
+private function generateDeveloperResponse($assistant, $request)
 {
    // Log::info('assistant:->'.$assistant);
 

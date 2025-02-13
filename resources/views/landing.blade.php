@@ -781,7 +781,7 @@ footer a:hover {
     <div id="chatbot-container"></div>
 	<link rel="stylesheet" href="https://smartchatix.com/chatbot.css">
 		<script>
-			var chatId = 5; // Convierte el valor de $id a un formato seguro para JS
+			var chatId = 13; // Convierte el valor de $id a un formato seguro para JS
 		</script>
 		<script src="https://smartchatix.com/chatbot.js"></script>
 

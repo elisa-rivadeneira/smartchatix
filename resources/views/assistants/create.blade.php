@@ -17,7 +17,8 @@
                 <select name="type" id="type" class="form-control">
                 <option value="curso">Curso</option>
                 <option value="producto">Producto</option>
-                <option value="servicio">Servicio</option>
+                <option value="servicio">Servicios</option>
+                <option value="developer">Developer</option>
                 <option value="base_de_datos">Base de Datos</option>
 
                 </select>

@@ -21,6 +21,11 @@ Route::get('/elixa_english', function () {
     return view('elixa');
 });
 
+Route::get('/chat', function () {
+    return view('chat');
+});
+
+
 Route::get('/politica_privacidad_elixa_english', function () {
     return view('politica_privacidad_elixa_english');
 });

@@ -1,5 +1,4 @@
-@extends('adminlte::page')
-@section('content')
+
 
 <head>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
@@ -128,10 +127,9 @@
 </head>
 
 <body>
-
 <!-- Código de ejemplo con la clase que Highlight.js usará -->
     <div class="chat-container">
-        <div class="chat-header">Chatbot</div>
+        <div class="chat-header">SmartChatix</div>
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-container">
         <textarea id="user-input" class="chat-input" placeholder="Escribe tu mensaje aquí..."></textarea>
@@ -142,7 +140,7 @@
 
     <script>
         const apiUrl = "https://www.smartchatix.com/api/generate-response";
-        const assistantId = {{ $assistant->id }}; // Cambia al ID de tu asistente en la base de datos
+        const assistantId = 12; // Cambia al ID de tu asistente en la base de datos
 
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
@@ -235,4 +233,3 @@
             }
         });
     </script>
-@endsection

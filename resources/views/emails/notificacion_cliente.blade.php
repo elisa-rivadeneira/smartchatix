@@ -5,8 +5,9 @@
 </head>
 <body>
     <h2>Hola, {{ $nombre }}</h2>
-    <p>{{ $mensaje }}</p>
+
+     <p>{{ $mensaje }}</p>
     <br>
-    <p>Saludos,<br>Tu Asistente Virtual</p>
+    <p>Saludos,<br>Elisa Rivadeneira</p><br>CEO SmartChatix
 </body>
 </html>

@@ -19,6 +19,7 @@ use App\Models\Course; //
 use Parsedown;
 use App\Mail\EnviarEmailCliente;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Session;
 
 
 
@@ -30,7 +31,6 @@ class AssistantController extends Controller
     {
         $models = AIModel::all(); // Obtener todos los modelos
 
-        //Log::info("Modelos: ".$models);
         return view('assistants.create', compact('models'));
     
     }
@@ -94,7 +94,6 @@ class AssistantController extends Controller
     public function edit($id)
 {
 
-    Log::info("El id que jala es : ".$id);
 
     // Buscar el asistente por ID
     $assistant = Assistant::with('model')  // Si tienes una relación definida en el modelo Assistant
@@ -105,8 +104,7 @@ class AssistantController extends Controller
 
     $models = AIModel::all(); // Obtener todos los modelos
 
-    Log::info("assistant: ".$assistant);
-
+    
 
 
     $document = Document::where('assistant_id', $id)->first(); // Buscar documento asociado
@@ -303,12 +301,9 @@ public function publicGenerateResponse_old(Request $request, $id)
         - Costa Verde : Ver el sol, conversar con el mar. Pasar momentos inolvidables";
 
 
-  Log::info('Prompt:::::::: ' . $prompt);
-
 
     // Interpretar la entrada del usuario
     $responseFromNLP = $this->interpretUserInput($user_input);
-    Log::info('$responseFromNLP: ' . $responseFromNLP);
 
     if ($responseFromNLP === 'contactar_humano') {
         // Caso: Usuario quiere hablar con humano
@@ -339,8 +334,6 @@ public function publicGenerateResponse_old(Request $request, $id)
     ])->cookie('chat_session_id', $sessionId, 120);
         
 
-        Log::info('Necesitando hablar con humano: ' . json_encode($response));
-
         // Devolver respuesta para el humano
         return response()->json($response);
     } else {
@@ -360,7 +353,6 @@ public function publicGenerateResponse_old(Request $request, $id)
         }
         $messages[] = ['role' => 'user', 'content' => $user_input];
 
-        Log::info('$model_identifier::::'.$model_identifier);
 
         // Llamada a la API de OpenAI
         $openAIResponse = Http::withToken(config('services.openai.api_key'))
@@ -392,8 +384,6 @@ public function publicGenerateResponse_old(Request $request, $id)
                 $generatedText = "<ul>" . $generatedText . "</ul>";
             }
 
-
-            Log::info('Texto generado IA: ' . $generatedText);
 
 
 
@@ -438,7 +428,6 @@ public function publicGenerateResponse_old(Request $request, $id)
             ->first();
 
 
-            Log::info('encontrando conversa: ' . $conversation);
 
         $user = User::find($assistant->user_id); // El id_user es la relación con el usuario
 
@@ -500,13 +489,11 @@ public function publicGenerateResponse_old(Request $request, $id)
 public function publicGenerateResponse(Request $request, $id)
 {
 
- //   Log::info('En el nuevo publicGenerateResponse');
     // Obtener el asistente con el ID proporcionado
     $assistant = Assistant::findOrFail($id);
 
     // Obtener el tipo de asistente (curso, producto, servicio)
     $type = $assistant->type;
-    Log::info("Type". $type);
 
     $model = DB::table('assistants')
     ->join('a_i_models', 'assistants.model_id', '=', 'a_i_models.id')
@@ -516,8 +503,6 @@ public function publicGenerateResponse(Request $request, $id)
 
     // Obtener el nombre del modelo
     $model_identifier = $model->model_identifier;
-
-  //  Log::info('El modelo que llamamos es ::::'.$model_identifier);
 
     $prompt = $assistant->prompt;
 
@@ -549,14 +534,11 @@ public function publicGenerateResponse(Request $request, $id)
             case 'curso':
                 // Lógica personalizada para el tipo 'curso'
                 $generatedText = $this->generateCourseResponse($assistant, $request);
-          //      Log::info('dando la respuesta de generatecourseresponse' .$generatedText );
                 break;
-    
             case 'producto':
                 // Lógica personalizada para el tipo 'producto'
                 $response = $this->generateProductResponse($assistant, $request);
                 break;
-    
             case 'developer':
                 // Lógica personalizada para el tipo 'developer'
                 $generatedText = $this->generateDeveloperResponse($assistant, $request);
@@ -583,8 +565,7 @@ public function publicGenerateResponse(Request $request, $id)
 
    
 
-   // Log::info('Linea 552');
-  
+
 
     $chatHistory = ChatHistory::create([
         'assistant_id' => $assistant->id,
@@ -592,8 +573,6 @@ public function publicGenerateResponse(Request $request, $id)
         'assistant_response' => $generatedText,
     ]);
 
-    //    Log::info('session_id: ' . $sessionId);
-    //    Log::info('assistant_id: ' . $assistant->id);
 
     $conversation = Conversation::where('session_id', $sessionId)
     ->where('assistant_id', $assistant->id)
@@ -606,9 +585,6 @@ public function publicGenerateResponse(Request $request, $id)
 
 
     if (!$conversation) {
-       // Log::info('Primer mensaje : ' );
-
-     //   Log::info('Primer mensaje con tokens: ' . $totalTokens);
 
         $conversation = Conversation::create([
             'session_id' => $sessionId,
@@ -626,9 +602,7 @@ public function publicGenerateResponse(Request $request, $id)
 
 
 
-     //   Log::info('Nueva conversación creada: ' . json_encode($conversation->toArray()));
     } else {
-      //  Log::info('Mensaje secundario: Incrementando tokens');
 
         // Incrementar los tokens si ya existe la conversación
         $conversation->increment('total_tokens', $totalTokens);
@@ -680,7 +654,6 @@ private function generateCourseResponse($assistant, $request)
 
 private function generateOpenAIResponse($prompt , $mensaje)
     {
-        //  Log::info('En funcion generateOpenAIResponse');
 
         $prompt.='Tu tarea es responder acerca de los cursos que brindamos';
 
@@ -709,9 +682,7 @@ private function generateOpenAIResponse($prompt , $mensaje)
 
         // Mensaje enviado por el usuario
 
-        Log::info('El mensaje es :'.$mensaje);
         $detectedCourse = $this->detectCourseQuery($mensaje); // Buscar si mencionan un curso
-        Log::info('detectedCourse es:'.$detectedCourse);
 
    
         if ($detectedCourse != optional(session('course_name'))->id && optional(session('course_name'))->id !== null) {
@@ -753,11 +724,6 @@ private function generateOpenAIResponse($prompt , $mensaje)
             
 
 
-    // Modificar el prompt para incluir los cursos disponibles
-       // $prompt .= " Adicionalmente si el usuario te pregunta acerca de la lista de cursos, estos son: $coursesListText.";
-
-
-    //    Log::info('prompt::'.$prompt);
 
     
     $instruction = [
@@ -776,7 +742,6 @@ private function generateOpenAIResponse($prompt , $mensaje)
         ]
     ]);
 
-    Log::info("holaholahola hola mensaje",$messages);
 
     $openAIResponse = Http::withToken(config('services.openai.api_key'))
     ->post('https://api.openai.com/v1/chat/completions', [
@@ -822,10 +787,6 @@ private function generateOpenAIResponse($prompt , $mensaje)
         );
 
 
-       // Log::info('URL de la imagen generada: ' . $imageUrl);
-        Log::info('texto generado: ' . $generatedText);
-        //return response()->json(['content' => $generatedText]);
-
 
     }else{
 
@@ -839,7 +800,6 @@ private function generateOpenAIResponse($prompt , $mensaje)
 
 private function detectCourseQuery($message) {
     // Buscar un curso cuyo título o categoría coincida con el mensaje del usuario
-    Log::info('Estamos buscando si habla de algun curso en el mensaje: '.$message);
     $courses = Course::all(); // Traer todos los cursos de la base de datos
     $bestMatch = null;
     $highestScore = 0;
@@ -918,16 +878,6 @@ private function generateOpenAIResponse_Service($prompt , $mensaje)
         // Combinar el historial con las instrucciones iniciales
         $messages = array_merge($instruction, $_SESSION['chat_history']);
 
-        // Agregar el mensaje del usuario al prompt
-        // $messages = array_merge($instruction, [
-        //     [
-        //         'role' => 'user', 
-        //         'content' => $mensaje
-        //     ]
-        // ]);
-
-        Log::info("elmensaje es:",$messages);
-
 
         $openAIResponse = Http::withToken(config('services.openai.api_key'))
         ->post('https://api.openai.com/v1/chat/completions', [
@@ -937,7 +887,6 @@ private function generateOpenAIResponse_Service($prompt , $mensaje)
             'temperature' => 0.1,
         ]);
 
-         Log::info('Tlinea 1134 ' );
 
 
         if ($openAIResponse->successful()) {
@@ -981,8 +930,7 @@ private function generateOpenAIResponse_Service($prompt , $mensaje)
             }
 
 
-              Log::info('Texto generado Limea 1178__________________');
-              Log::info('Texto generado Limea 1179__________________' .$generatedText);
+
 
 
             // Finalmente, devolver el texto procesado
@@ -991,10 +939,7 @@ private function generateOpenAIResponse_Service($prompt , $mensaje)
             Log::info("openAIResponse No fue successful");
         }
 
-        // Log para verificar el texto generado
-        Log::info('Texto generado_____________________: ' . $generatedText);
 
-       // Log::info('Texto generado-M_M_M_:', ['generatedText' => $generatedText]);
 
                 return $generatedText;
               //  return response()->json(['generatedText' => $generatedText]);
@@ -1004,10 +949,10 @@ private function generateOpenAIResponse_Service($prompt , $mensaje)
 
 private function generateDBResponse($assistant, $request)
 {
-   // Log::info('assistant:->'.$assistant);
 
     $prompt=$assistant->prompt;
 
+    $prompt.="Eres un agente que ejecuta acciones como la capacidad de generar emails y enviarlos de acuerdo a las solicitudes que te hagan";
     return $this->generateOpenAIResponse_DB($prompt,$request->user_input);
 }
 
@@ -1015,7 +960,7 @@ private function generateOpenAIResponse_DB($prompt , $mensaje)
 {
 
 
-    Log::info("✅ Entrando a generateOpenAIResponse_DB()");
+        Log::info("✅ Entrando a generateOpenAIResponse_DB()");
 
         $generatedText='';
         Log::info('En funcion generateOpenAIResponse programming');
@@ -1023,196 +968,157 @@ private function generateOpenAIResponse_DB($prompt , $mensaje)
         $prompt.='Eres un asistente que da informacion sobre las bases de datos y tambien grficas y estadisticas acerca de las consultas. Das las respuestas en fromato markdown bien estilizadas';
 
 
-
         $instruction = [
             [
                 "role" => "system", 
                 "content" => $prompt
-                
                 ]
         ];
-// Iniciar sesión para almacenar el historial (si aún no está iniciada)
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+    //    Log::info('Cookie de sesión: ' . json_encode($_SESSION));
+        // Iniciar sesión para almacenar el historial (si aún no está iniciada)
+        if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+        }
+        // Crear o recuperar el historial desde la sesión
+        if (!isset($_SESSION['chat_history'])) {
+        $_SESSION['chat_history'] = []; // Inicializar historial si no existe
+        }
 
-// Crear o recuperar el historial desde la sesión
-if (!isset($_SESSION['chat_history'])) {
-    $_SESSION['chat_history'] = []; // Inicializar historial si no existe
-}
+        // Limitar el historial a los últimos 20 mensajes
+        if (count($_SESSION['chat_history']) > 20) {
+            $_SESSION['chat_history'] = array_slice($_SESSION['chat_history'], -20);
+        }
 
-// Limitar el historial a los últimos 20 mensajes
-if (count($_SESSION['chat_history']) > 20) {
-    $_SESSION['chat_history'] = array_slice($_SESSION['chat_history'], -20);
-}
+        // Agregar el mensaje actual del usuario al historial
+        $_SESSION['chat_history'][] = [
+            'role' => 'user',
+            'content' => $mensaje
+        ];
 
-// Agregar el mensaje actual del usuario al historial
-$_SESSION['chat_history'][] = [
-    'role' => 'user',
-    'content' => $mensaje
-];
+        // Verificar si el mensaje contiene palabras clave para enviar email
+        // Limpiar y normalizar mensaje
+        // Normalizar mensaje antes de analizarlo
 
-// Verificar si el mensaje contiene palabras clave para enviar email
-// Limpiar y normalizar mensaje
-// Normalizar mensaje antes de analizarlo
+        $resultado= $this->detectarIntencion($mensaje);
 
-
-    Log::info("🔍 Entrara por aqui si o noooo ?");
-
-
-$response = Http::post('http://127.0.0.1:5001/analizar', ['mensaje' => $mensaje]);
-$responseData = $response->json();
-
-$intencion     = $responseData['intencion'] ?? null;
-$destinatario  = $responseData['destinatario'] ?? null;
-$contenido     = $responseData['contenido'] ?? null;
-
-  Log::info("🔍 Intencionnnnnnn: " . $intencion);
-
-  $clientes = DB::connection('mysql2')->table('clientes')->get();
-Log::info("🔍 Clientes en la base de datos: " . json_encode($clientes));
+        $intencion = $resultado['intencion'];
+        $destinatario = $resultado['destinatario'];
 
 
-if ($intencion === 'email' && !empty($destinatario) && !empty($contenido)) {
-    Log::info("✅ Se detectó intención de email, llamando a procesarEnvioEmail()");
+         switch ($intencion) {
+            case 'ventas':
+                return $this->obtenerVentas();
+            case 'compras':
+                return $this->obtenerCompras();
+            case 'stock':
+                return $this->obtenerStock();
+            case 'clientes':
+                return $this->obtenerClientes();
+            case 'movimientos':
+                return $this->obtenerMovimientos();
+            case 'crear_email':
 
-    Log::info("🔍 Flask detectó intención: " . $intencion);
-    Log::info("📩 Destinatario detectado: " . $destinatario);
-    Log::info("✉️ Contenido del email: " . $contenido);
+                Session::put('esperando_confirmacion', true);
+                Session::put('destinatario', $destinatario);
+                Session::save();
 
-    // Llama a la función que se encarga de enviar el email usando los datos extraídos
+                //$_SESSION['esperando_confirmacion'] = true;  // Guardar que estamos esperando confirmación
+                //$_SESSION['destinatario']=$destinatario;
+               
 
+                //Log::info("✅ la instruction es ".json_encode($instruction));
+                 return $this->crear_email($instruction,$mensaje, $destinatario);  
+            case 'modificar_email':
+                $esperando = Session::get('esperando_confirmacion', false);
+                $destinatario = Session::get('destinatario', '');
+                $email_contenido = Session::get('email_contenido', '');
 
-  // Extraer los valores dinámicamente por nombre de grupo
-    $nombreCliente = $destinatario;
-    $mensajeEmail = $contenido;
+                if ($esperando ?? false) {  
+                Log::info("Modificando Email con IA");
+                // Llamar a OpenAI para corregir el email actual
+                $nuevoContenido = $this->crear_email($instruction, "Corrige este email y hazlo más claro: " . $email_contenido, $destinatario);
+                if (!$nuevoContenido) {
+                return "❌ Error: No se pudo corregir el email.";
+                }
+                // Actualizar el contenido corregido en la sesión
+                $_SESSION['email_contenido'] = $nuevoContenido;
+                return $nuevoContenido . "<br><br><strong>¿Desea enviar este email corregido?</strong>";
+            }
+            case 'enviar_email':
+                //Log::info('Esperando confirmacion session en enviar email::::::'.$_SESSION['esperando_confirmacion']);
+                $esperando = Session::get('esperando_confirmacion', false);
+                $destinatario = Session::get('destinatario', '');
+                $email_contenido = Session::get('email_contenido', '');
 
+                Log::info('Esperando en session es **********:'. $esperando );
+                Log::info('El destinatario en session es**********:'. $destinatario );
+                Log::info('Email contenido en session es**********:'. $email_contenido );
 
+                //Log::info('destinatario:::::::::::::'. $_SESSION['destinatario']);
+                //Log::info('email_contenido:::::::::::::'.$_SESSION['email_contenido']);
+                if ($esperando ?? false) {  // Verificar si se está esperando confirmación
+                unset($esperando);  // Resetear la variable de sesión
 
-    Log::info("📩 Cliente: " . $nombreCliente . " | Mensaje: " . $mensajeEmail);
-
-    $cliente = DB::connection('mysql2')
-        ->table('clientes')
-        ->where('nombre', 'LIKE', "%$nombreCliente%")
-        ->first();
-        Log::info("✅ El cliente es :::: ".$cliente->nombre);
-
-
-    // Ahora puedes procesar el envío del email
-    return $this->enviarEmailCliente($cliente->id, $mensajeEmail);
-
-} elseif ($intencion === 'saludo') {
-    Log::info("👋 Se detectó un saludo.");
-    return "👋 ¡Hola! ¿En qué puedo ayudarte hoy?";
-}
-elseif ($intencion === 'clientes') {
-    Log::info("👋 Detecto clientes.");
-  //  return "👋 ¡Hola! ¿En qué puedo ayudarte hoy?";
-}
-
-
-
-elseif ($intencion === 'ventas') {
-    Log::info("✅ Se detectó intención de consulta de ventas, llamando a procesarConsultaVentas()");
-                    Log::info("✅ estamos en linea 985 paramostrar la tabla ventas *******");
-
-    // Consultar la base de datos secundaria
-    $ventas = DB::connection('mysql2')
-        ->table('ventas')
-        ->join('clientes', 'ventas.id_cliente', '=', 'clientes.id') // Unimos las tablas
-        ->select(
-            'clientes.nombre as cliente_nombre',
-            'clientes.email',
-            'clientes.telefono',
-            'ventas.producto',
-            'ventas.precio_unitario',
-            'ventas.fecha_venta',
-            'ventas.cantidad',
-            'ventas.total'
-        )
-        ->get();
-
-    // Crear un mensaje con las estadísticas de ventas y datos del cliente
-    $salesInfo = "📊 *Resumen de Ventas* 📊\n\n";
-    $salesInfo .= "| Cliente          | Email                  | Teléfono       | Producto      | Precio | Fecha       | Cantidad | Total |\n";
-    $salesInfo .= "|------------------|------------------------|----------------|---------------|--------|-------------|----------|-------|\n";
-
-    foreach ($ventas as $venta) {
-        $salesInfo .= "| {$venta->cliente_nombre} | {$venta->email} | {$venta->telefono} | {$venta->producto} | {$venta->precio_unitario} | {$venta->fecha_venta} | {$venta->cantidad} | {$venta->total} |\n";
-    }
-    // Agregar información de ventas al historial
-    $_SESSION['chat_history'][] = [
-        'role' => 'assistant',
-        'content' => $salesInfo
-    ];
-        } else {
-            Log::info("⚠ No se detectó una intención válida.");
-        // return "⚠ No entendí tu solicitud. ¿Puedes reformularla?";
+                 return $this->enviarEmail($destinatario,$email_contenido);  
+                }
+            case 'saludo':
+                return 'Hola! La paz sea contigo! Bienvenido a SmartChatix';
+            default:
+                return $this->interpretarconIA($instruction,$mensaje);  
+            // return response()->json(['respuesta' => "No entendí tu pregunta. ¿Puedes ser más específico?"]);
         }
 
 
+                        $messages = array_merge($instruction, $_SESSION['chat_history']);
 
-        $messages = array_merge($instruction, $_SESSION['chat_history']);
-
-
-
-        // Llamar a la API de OpenAI
-        $openAIResponse = Http::withToken(config('services.openai.api_key'))
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-3.5-turbo',
-                'messages' => $messages,
-                'max_tokens' => 4096,
-                'temperature' => 0.1,
-            ]);
-
-            // Manejar la respuesta de OpenAI
-            if ($openAIResponse->successful()) {
-                $responseContent = $openAIResponse->json();
-                Log::info("Respuesta de OpenAI:", $responseContent);
-
-                // Agregar la respuesta al historial
-                $_SESSION['chat_history'][] = [
-                    'role' => 'assistant',
-                    'content' => $responseContent['choices'][0]['message']['content']
-                ];
-                //Log::info('entrega::::::::::: '. $responseContent['choices'][0]['message']['content']);
-
-                // Retornar la respuesta generada por el modelo
-                //return $responseContent['choices'][0]['message']['content'];
-
-                    $parsedown = new Parsedown();
-                    $htmlContent = $parsedown->text($responseContent['choices'][0]['message']['content']);
-                    return $htmlContent;
-
-                //  $generatedText='| Cliente          | Producto                            | Precio unitario | Fecha Venta | Cantidad | Subtotal |
-                    // |------------------|-------------------------------------|-----------------|-------------|----------|----------|
-                    // | Juan Pérez       | Laptop Dell Inspiron 15             | 2500.00         | 2025-01-01  | 1        | 2500.00  |
-                    // | Ana Martínez     | Mouse Logitech MX Master 3         | 300.00          | 2025-01-02  | 2        | 600.00   |
-                    // | Carlos Ramírez   | Teclado Mecánico Razer BlackWidow  | 500.00          | 2025-01-03  | 1        | 500.00   |
-                    // | Laura López      | Monitor Samsung 27"                 | 1200.00         | 2025-01-04  | 1        | 1200.00  |
-                    // | Luis Gutiérrez   | Disco SSD Kingston 1TB              | 350.00          | 2025-01-05  | 3        | 1050.00  |
-                    // ';
-            //      return $generatedText;
+                         //   Log::info("messages ::::::::::::::::::::::::" .json_encode($messages) );
 
 
-            } else {
-                // Manejar errores en la llamada a la API
-                Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-                return response()->json(['error' => 'Error al generar la respuesta.'], 500);
-            }
+                        // Llamar a la API de OpenAI
+                        $openAIResponse = Http::withToken(config('services.openai.api_key'))
+                        ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => 'gpt-3.5-turbo',
+                        'messages' => $messages,
+                        'max_tokens' => 4096,
+                        'temperature' => 0.1,
+                        ]);
 
-            // Manejar la respuesta de OpenAI
-            if ($openAIResponse->successful()) {
-                $responseContent = $openAIResponse->json();
-                Log::info("Respuesta de OpenAI:", $responseContent);
+                        // Manejar la respuesta de OpenAI
+                        if ($openAIResponse->successful()) {
+                            $responseContent = $openAIResponse->json();
+                            //Log::info("Respuesta de OpenAI:", $responseContent);
 
-                // Retornar la respuesta generada por el modelo
-                return $responseContent['choices'][0]['message']['content'];
-            } else {
-                // Manejar errores en la llamada a la API
-                Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-                return response()->json(['error' => 'Error al generar la respuesta.'], 500);
-            }
+                            // Agregar la respuesta al historial
+                            $_SESSION['chat_history'][] = [
+                                'role' => 'assistant',
+                                'content' => $responseContent['choices'][0]['message']['content']
+                            ];
+                        
+
+                            $parsedown = new Parsedown();
+                            $htmlContent = $parsedown->text($responseContent['choices'][0]['message']['content']);
+                            return $htmlContent;
+
+            
+
+                        } else {
+                            // Manejar errores en la llamada a la API
+                            Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
+                            return response()->json(['error' => 'Error al generar la respuesta.'], 500);
+                        }
+
+                        // Manejar la respuesta de OpenAI
+                        if ($openAIResponse->successful()) {
+                            $responseContent = $openAIResponse->json();
+                          //  Log::info("Respuesta de OpenAI:", $responseContent);
+
+                            // Retornar la respuesta generada por el modelo
+                            return $responseContent['choices'][0]['message']['content'];
+                        } else {
+                            // Manejar errores en la llamada a la API
+                            Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
+                            return response()->json(['error' => 'Error al generar la respuesta.'], 500);
+                        }
 
 
 
@@ -1221,47 +1127,290 @@ elseif ($intencion === 'ventas') {
        
 
 
-        if ($openAIResponse->successful()) {
-            Log::info('Pasando por aquiiiii.... en openairesponse');
-        $responseData = $openAIResponse->json();
-        $generatedText = $responseData['choices'][0]['message']['content'];
-        // Formatear el texto generado
-        $generatedText = nl2br($generatedText); // Convertir saltos de línea a <br>
-        $generatedText = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $generatedText);
+            if ($openAIResponse->successful()) {
+            //   Log::info('Pasando por aquiiiii.... en openairesponse');
+            $responseData = $openAIResponse->json();
+            $generatedText = $responseData['choices'][0]['message']['content'];
+            // Formatear el texto generado
+            $generatedText = nl2br($generatedText); // Convertir saltos de línea a <br>
+            $generatedText = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $generatedText);
 
-        // Convertir los encabezados en <h6>
-        $generatedText = preg_replace('/^### (.+)/m', '<h6>$1</h6>', $generatedText);
+            // Convertir los encabezados en <h6>
+            $generatedText = preg_replace('/^### (.+)/m', '<h6>$1</h6>', $generatedText);
 
-        // Convertir las listas con guion (-) en elementos <li>
-        $generatedText = preg_replace('/^- (.+)/m', '<li>$1</li>', $generatedText);
+            // Convertir las listas con guion (-) en elementos <li>
+            $generatedText = preg_replace('/^- (.+)/m', '<li>$1</li>', $generatedText);
 
-        // Envolver las listas en <ul> solo si hay elementos <li>
-        if (strpos($generatedText, '<li>') !== false) {
-            // Envolver solo el contenido de la lista en un <ul>
-            $generatedText = preg_replace('/(<li>.*?<\/li>)/s', '<ul>$0</ul>', $generatedText);
-        }
+            // Envolver las listas en <ul> solo si hay elementos <li>
+            if (strpos($generatedText, '<li>') !== false) {
+                // Envolver solo el contenido de la lista en un <ul>
+                $generatedText = preg_replace('/(<li>.*?<\/li>)/s', '<ul>$0</ul>', $generatedText);
+            }
 
-        // Procesar las imágenes
-        $generatedText = preg_replace_callback(
-            '/!\[(.*?)\]\((https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))\)/i',
-            function ($matches) {
-                return '<img src="' . htmlspecialchars($matches[2]) . '" alt="' . htmlspecialchars($matches[1]) . '" style="max-width:100%; height:auto;" />';
-            },
-            $generatedText
-        );
-        }else{
-            Log::info("openAIResponse No fue succefuls");
-        }
-
-
-       // Log::info('URL de la imagen generada: ' . $imageUrl);
-        Log::info('texto generado: ' . $generatedText);
-        //return response()->json(['content' => $generatedText]);
-
-
-     //   $generatedText='**Probando markdown**';
-        return $generatedText;
+            // Procesar las imágenes
+            $generatedText = preg_replace_callback(
+                '/!\[(.*?)\]\((https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))\)/i',
+                function ($matches) {
+                    return '<img src="' . htmlspecialchars($matches[2]) . '" alt="' . htmlspecialchars($matches[1]) . '" style="max-width:100%; height:auto;" />';
+                },
+                $generatedText
+            );
+            }else{
+                Log::info("openAIResponse No fue succefuls");
+            }
+            // Log::info('URL de la imagen generada: ' . $imageUrl);
+            Log::info('texto generado: ' . $generatedText);
+            //return response()->json(['content' => $generatedText]);
+            //   $generatedText='**Probando markdown**';
+            return $generatedText;
         
+}
+
+private function crear_email($instruction, $mensaje, $destinatario){
+                Log::info("Creando Email con IA");
+                
+                        $messages = array_merge($instruction, $_SESSION['chat_history']);
+                        //Log::info("messages ::::::::::::::::::::::::" .json_encode($messages) );
+
+                        // Llamar a la API de OpenAI
+                        $openAIResponse = Http::withToken(config('services.openai.api_key'))
+                        ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => 'gpt-3.5-turbo',
+                        'messages' => $messages,
+                        'max_tokens' => 4096,
+                        'temperature' => 0.1,
+                        ]);
+
+                        // Manejar la respuesta de OpenAI
+                        if ($openAIResponse->successful()) {
+                            $responseContent = $openAIResponse->json();
+
+                            // Agregar la respuesta al historial
+                            $_SESSION['chat_history'][] = [
+                                'role' => 'assistant',
+                                'content' => $responseContent['choices'][0]['message']['content']
+                            ];
+
+                            $texto = $responseContent['choices'][0]['message']['content'];
+
+                            
+
+
+
+                            // Quita desde 'saludos' en adelante (ignorando mayúsculas y saltos de línea)
+                            $textoSinFirma = preg_replace('/\n?saludos.*/is', '', $texto);
+
+                            // Limpia espacios y saltos de línea sobrantes
+                            $textoSinFirma = trim($textoSinFirma);
+
+                            // Finalmente, muestra/devuelve el texto sin la despedida
+                            
+
+                            // Convertir la respuesta en HTML
+                            $parsedown = new Parsedown();
+                            $htmlContent = $parsedown->text($textoSinFirma);
+
+                            // Guardar en sesión que estamos esperando confirmación del usuario
+                            // $_SESSION['esperando_confirmacion'] = true;
+                            Session::put('esperando_confirmacion', true);
+                            //$_SESSION['email_contenido'] = $textoSinFirma;
+                            Session::put('email_contenido', $textoSinFirma);
+
+                            $nombreCliente = $destinatario;
+                            $cliente = DB::connection('mysql2')
+                                ->table('clientes')
+                                ->where('nombre', 'LIKE', "%$nombreCliente%")
+                                ->first();
+                                Log::info("✅ El cliente es :::: ".$cliente->nombre);
+                            //$_SESSION['email_destinatario'] = $cliente->email;
+                            Session::put('email_destinatario', $cliente->email);
+                            Session::save();
+
+                            // Agregar la pregunta al usuario
+                            $htmlContent .= "<br><br><strong>¿Desea enviar este email a ".$cliente->nombre." (" .$cliente->email.") ?</strong>";
+                            return $htmlContent;
+                        }else{
+                            Log::info("📩 Destinatario detectado: Algo salio mal con la consulta ");
+
+                            return "Algo salio mal con la consulta";
+                        }
+
+}
+
+private function enviarEmail($destinatario, $contenido){
+                Log::info("📩 Destinatario detectado: " . json_encode($destinatario));
+                Log::info("✉️ Contenido del email: " . json_encode($contenido));
+                Log::info("✅ Se detectó intención de email, llamando a procesarEnvioEmail()");
+
+
+                // Llama a la función que se encarga de enviar el email usando los datos extraídos
+                // Extraer los valores dinámicamente por nombre de grupo
+                $nombreCliente = $destinatario;
+
+
+
+
+                // 1. Elimina todo lo que va desde el inicio hasta (e incluyendo) "**Asunto:**"
+                $textoDepurado = preg_replace('/^.*?\*\*Asunto:\*\*/is', '', $contenido);
+                // Este regex dice:
+                //  - ^    => desde el inicio de la cadena
+                //  - .*?  => cualquier cosa (de forma no codiciosa)
+                //  - \*\*Asunto:\*\* => busca literalmente "**Asunto:**"
+                //  - /is  => i = case-insensitive, s = que '.' incluya saltos de línea
+
+                // 2. A continuación, si también deseas quitar la palabra “Asunto:” que quedó, puedes hacerlo:
+                $textoDepurado = preg_replace('/^asunto:\s*/i', '', ltrim($textoDepurado));
+
+                // 3. Finalmente, limpia espacios
+                $textoDepurado = trim($textoDepurado);
+
+
+                $textoSinSaludo = preg_replace('/hola\s+[a-záéíóúüñ]+\,?/i', '', $textoDepurado);
+                $textoSinSaludo = trim($textoSinSaludo);
+
+
+
+
+                $mensajeEmail = $textoSinSaludo;
+
+
+
+                Log::info("📩 Cliente: " . $nombreCliente . " | Mensaje: " . $mensajeEmail);
+
+                $cliente = DB::connection('mysql2')
+                    ->table('clientes')
+                    ->where('nombre', 'LIKE', "%$nombreCliente%")
+                    ->first();
+                    Log::info("✅ El cliente es :::: ".$cliente->nombre);
+
+
+                // Ahora puedes procesar el envío del email
+                return $this->enviarEmailCliente($cliente->id, $mensajeEmail);
+}
+
+private function interpretarconIA($instruction,$mensaje){
+                    Log::info("Interpretando con IA");
+
+                         $messages = array_merge($instruction, $_SESSION['chat_history']);
+
+                            //Log::info("messages ::::::::::::::::::::::::" .json_encode($messages) );
+
+
+                            Log::info('linea 1299');
+                        // Llamar a la API de OpenAI
+                        $openAIResponse = Http::withToken(config('services.openai.api_key'))
+                        ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => 'gpt-3.5-turbo',
+                        'messages' => $messages,
+                        'max_tokens' => 4096,
+                        'temperature' => 0.1,
+                        ]);
+
+                        // Manejar la respuesta de OpenAI
+                        if ($openAIResponse->successful()) {
+                            Log::info('linea 1311');
+
+                            $responseContent = $openAIResponse->json();
+                            //Log::info("Respuesta de OpenAI:", $responseContent);
+
+                            // Agregar la respuesta al historial
+                            $_SESSION['chat_history'][] = [
+                                'role' => 'assistant',
+                                'content' => $responseContent['choices'][0]['message']['content']
+                            ];
+                        
+
+                            $parsedown = new Parsedown();
+                            $htmlContent = $parsedown->text($responseContent['choices'][0]['message']['content']);
+                            return $htmlContent;
+                            }else{
+                            Log::info('linea 1327');
+                            return "Yo quiero mi primer millon";
+                            }
+                }
+
+private function saludar(){
+    return " 🤗 Hola ¡Bienvenido a SmartChatix!  ";
+}
+
+private function obtenerClientes(){
+          $clients = DB::connection('mysql2')
+                        ->table('clientes')
+                        ->get();
+                        // Crear un mensaje con las estadísticas de ventas y datos del cliente
+                        $clientsInfo = "📊 *Resumen de los Clientes* 📊\n\n";
+                        $clientsInfo .= "| id          | nombre                  | telefono       | email      | Direccion | Notas       | \n";
+                        $clientsInfo .= "|------------------|------------------------|----------------|---------------|--------|-------------|\n";
+
+                        foreach ($clients as $client) {
+                            $clientsInfo .= "| {$client->id} | {$client->nombre} | {$client->telefono} | {$client->email} | {$client->direccion} | {$client->notas} | \n";
+                        }
+                        // Agregar información de ventas al historial
+                        $_SESSION['chat_history'][] = [
+                            'role' => 'assistant',
+                            'content' => $clientsInfo
+                        ];
+
+                        return  $clientsInfo ;// Markdown para chat
+                                                    
+
+}
+
+private function obtenerVentas(){
+                    Log::info("✅ Se detectó intención de consulta de ventas, llamando a procesarConsultaVentas()");
+
+                    // Consultar la base de datos secundaria
+                    $ventas = DB::connection('mysql2')
+                        ->table('ventas')
+                        ->join('clientes', 'ventas.id_cliente', '=', 'clientes.id') // Unimos las tablas
+                        ->select(
+                            'clientes.nombre as cliente_nombre',
+                            'clientes.email',
+                            'clientes.telefono',
+                            'ventas.producto',
+                            'ventas.precio_unitario',
+                            'ventas.fecha_venta',
+                            'ventas.cantidad',
+                            'ventas.total'
+                        )
+                        ->get();
+
+                        // Crear un mensaje con las estadísticas de ventas y datos del cliente
+                        $salesInfo = "📊 *Resumen de Ventas* 📊\n\n";
+                        $salesInfo .= "| Cliente          | Email                  | Teléfono       | Producto      | Precio | Fecha       | Cantidad | Total |\n";
+                        $salesInfo .= "|------------------|------------------------|----------------|---------------|--------|-------------|----------|-------|\n";
+
+                        foreach ($ventas as $venta) {
+                            $salesInfo .= "| {$venta->cliente_nombre} | {$venta->email} | {$venta->telefono} | {$venta->producto} | {$venta->precio_unitario} | {$venta->fecha_venta} | {$venta->cantidad} | {$venta->total} |\n";
+                        }
+                        // Agregar información de ventas al historial
+                        $_SESSION['chat_history'][] = [
+                            'role' => 'assistant',
+                            'content' => $salesInfo
+                        ];
+
+                        return  $salesInfo ;// Markdown para chat
+                            
+}
+
+private function detectarIntencion($mensaje){
+   $response = Http::post('http://127.0.0.1:5001/analizar', ['mensaje' => $mensaje]);
+        $responseData = $response->json();
+
+        $intencion     = $responseData['intencion'] ?? null;
+        $destinatario  = $responseData['destinatario'] ?? null;
+        
+    // Devolver un array con la intención y el destinatario
+            return [
+                'intencion' => $intencion,
+                'destinatario' => $destinatario
+            ];
+}
+
+private function generarGraficoVentas($prompt, $mensaje){
+
+
+
 }
 
 
@@ -1601,6 +1750,7 @@ public function enviarEmailCliente($cliente_id, $mensaje)
 
     // Enviar email usando Laravel Mail
     Mail::to($cliente->email)->send(new EnviarEmailCliente($cliente, $mensaje));
+    Log::info("el contenido enviado es :::".$mensaje);
 
     return "✅ Email enviado a {$cliente->nombre} ({$cliente->email}).";
 }

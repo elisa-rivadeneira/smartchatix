@@ -155,15 +155,45 @@
 
         // Función para agregar un mensaje al chat
         function addMessage(content, role) {
+            // console.log('content::::', content);
+            // const messageDiv = document.createElement('div');
+            // messageDiv.classList.add('chat-message', role);
+
+            // // Convertir el contenido Markdown a HTML
+            // messageDiv.innerHTML = marked(content);
+
+            // chatMessages.appendChild(messageDiv);
+            // chatMessages.scrollTop = chatMessages.scrollHeight;
+
             console.log('content::::', content);
+            
+            // 1. Determina si 'content' es un objeto o un string
+            let finalText = '';
+
+            if (typeof content === 'object' && content !== null) {
+                // Si es un objeto con la clave 'assistant_response'
+                if (content.hasOwnProperty('assistant_response')) {
+                    finalText = content.assistant_response;
+                } else {
+                    // Si no está esa clave, lo conviertes en string (para no romper marked)
+                    finalText = JSON.stringify(content);
+                }
+            } else {
+                // Si es string, lo usas tal cual
+                finalText = content;
+            }
+
+            // 2. Creas el div para el mensaje
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('chat-message', role);
 
-            // Convertir el contenido Markdown a HTML
-            messageDiv.innerHTML = marked(content);
+            // 3. Convertir el contenido Markdown a HTML con Marked
+            messageDiv.innerHTML = marked(finalText);
 
+            // 4. Agregar el mensaje al contenedor
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+
         }
 
         // Función para enviar un mensaje al backend
@@ -195,6 +225,17 @@
 
                     // Mostrar la respuesta del asistente (convertida a Markdown)
                     addMessage(data.assistant_response, 'assistant');
+
+                    if (data.chart_data) {
+                        console.log('Si va a llamar a drawChat')
+
+
+                        drawChart(data.chart_data); 
+                    }else{
+                        console.log('No tiene data.chart_data')
+
+                    }
+
                     console.log('data::::', data);
                     console.log('sessionid retorna::::', sessionId);
 
@@ -211,6 +252,50 @@
                 addMessage("No se pudo conectar al servidor.", 'assistant');
             }
         }
+
+        function drawChart(chartData) {
+    console.log('🎨 En función drawChart');
+
+    let canvas = document.getElementById('myChart');
+
+    if (!canvas) {
+        console.log("⚠️ No se encontró 'myChart', creando un nuevo canvas...");
+        canvas = document.createElement('canvas');
+        canvas.id = 'myChart';
+        chatMessages.appendChild(canvas);
+    }
+
+    // Obtener el contexto del canvas
+    let ctx = canvas.getContext('2d');
+
+    // 🔹 Si el gráfico ya existe en el canvas, destruirlo
+    if (Chart.getChart(canvas)) {
+        console.log("🗑️ Destruyendo gráfico anterior...");
+        Chart.getChart(canvas).destroy();
+    }
+
+    // 🔹 Crear un nuevo gráfico en Chart.js
+    new Chart(ctx, {
+        type: 'bar', // O 'line', 'pie', etc.
+        data: {
+            labels: chartData.labels,
+            datasets: chartData.datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    console.log("✅ Nuevo gráfico generado correctamente.");
+}
+
+
 
         // Manejar clic en el botón de enviar
         sendBtn.addEventListener('click', sendMessage);
@@ -235,4 +320,11 @@
             }
         });
     </script>
+    <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+<script>
+    mermaid.initialize({
+      startOnLoad: true
+    });
+</script>
+
 @endsection

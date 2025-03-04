@@ -570,19 +570,25 @@ public function publicGenerateResponse(Request $request, $id)
     $chatHistory = ChatHistory::create([
         'assistant_id' => $assistant->id,
         'user_message' => $user_input,
-        'assistant_response' => $generatedText,
+        //'assistant_response' => $generatedText,
+        'assistant_response' => is_array($generatedText)
+        ? $generatedText['assistant_response']
+        : $generatedText,
+        'chart_data' => is_array($generatedText)
+        ? json_encode($generatedText['chart_data'])
+        : null,
     ]);
 
+    Log::info('Linea 582');
 
     $conversation = Conversation::where('session_id', $sessionId)
     ->where('assistant_id', $assistant->id)
     ->first();
 
 
-    //   Log::info('encontrando conversa: ' . $conversation);
-
     $user = User::find($assistant->user_id); // El id_user es la relación con el usuario
 
+    Log::info('Linea 591');
 
     if (!$conversation) {
 
@@ -617,29 +623,42 @@ public function publicGenerateResponse(Request $request, $id)
         $user->save();
 
 
-   //     Log::info('Tokens actualizados: ' . $conversation->total_tokens);
     }
+        //Log::info('GenerateText en linea 627:'.$generatedText);
+        if (is_array($generatedText)) {
+                // Tiene 'assistant_response'
+                $assistantText = $generatedText['assistant_response'];
+            } else {
+                // Es solo un string
+                $assistantText = $generatedText;
+            }
         Message::create(['conversation_id' => $conversation->id, 'sender' => 'user', 'message' => $user_input]);
-        Message::create(['conversation_id' => $conversation->id, 'sender' => 'assistant', 'message' => $generatedText]);
+        Message::create(['conversation_id' => $conversation->id, 'sender' => 'assistant', 'message' => $assistantText]);
 
+    Log::info('Linea 630');
 
     $coursesession = session('course_name');
+    Log::info('Linea 633');
 
     if($coursesession){
-    Log::info('CourseName in session:'.$coursesession->id );
-    Log::info('CourseName in session:'.session('course_name')->id );
 
-}
+
+    }
+
+        Log::info('Linea 648');
+
 
 
     return response()->json([
-        'user_message' => $chatHistory->user_message,
-        'assistant_response' => $chatHistory->assistant_response,
+        'user_message' => $user_input,
+        'assistant_response' => $assistantText,
         'session_id' => $sessionId,
-
+        'chart_data' => (is_array($generatedText) && isset($generatedText['chart_data']))
+            ? $generatedText['chart_data']
+            : null
     ])->cookie('chat_session_id', $sessionId, 120);
     // Retornar la respuesta generada
-    return response()->json(['response' => $response]);
+    //return response()->json(['response' => $response]);
 }
 
 private function generateCourseResponse($assistant, $request)
@@ -965,7 +984,11 @@ private function generateOpenAIResponse_DB($prompt , $mensaje)
         $generatedText='';
         Log::info('En funcion generateOpenAIResponse programming');
 
-        $prompt.='Eres un asistente que da informacion sobre las bases de datos y tambien grficas y estadisticas acerca de las consultas. Das las respuestas en fromato markdown bien estilizadas';
+        $prompt.='Eres un asistente que da informacion sobre las bases de datos y tambien grficas y estadisticas acerca de las consultas. Das las respuestas en formato markdown bien estilizadas. No inventas datos, todos los datos los obtienes del historial o contexto.';
+
+        $prompt.='Indicar que si no encuentra cierta información, responda con una aclaración (“No encuentro esos datos en el historial”)';
+
+        $prompt.='Cuando te pidan datos de ventas o graficos de las ventas, devuelve un JSON con la configuración de Chart.js (labels, datasets, etc.) bajo la clave chart_data. Devuélvelo en un bloque ```json. Además, explica el resultado en Markdown, pero no incluyas <script> ni <canvas>, tampoco lo pongas dentro de <pre><code class="language-json">';
 
 
         $instruction = [
@@ -1006,8 +1029,12 @@ private function generateOpenAIResponse_DB($prompt , $mensaje)
 
 
          switch ($intencion) {
+            // case 'ventas':
+            //     return $this->obtenerVentas();
             case 'ventas':
-                return $this->obtenerVentas();
+                return $this->obtenerVentasfaiss($mensaje);
+            case 'grafico':
+                return $this->obtenerGrafico($mensaje);
             case 'compras':
                 return $this->obtenerCompras();
             case 'stock':
@@ -1069,101 +1096,123 @@ private function generateOpenAIResponse_DB($prompt , $mensaje)
         }
 
 
-                        $messages = array_merge($instruction, $_SESSION['chat_history']);
+                        
+        
+}
 
-                         //   Log::info("messages ::::::::::::::::::::::::" .json_encode($messages) );
+
+private function obtenerVentasfaiss($mensaje){
+ // URL de Flask (ajusta según dónde lo estés ejecutando)
+    $url = "http://127.0.0.1:5002/analizar"; // 
+
+    // Enviar el mensaje a Flask
+    $response = Http::post($url, ["mensaje" => $mensaje]);
+
+    // Verificar si la respuesta fue exitosa
+    if ($response->failed()) {
+        return ["error" => "No se pudo obtener los datos de FAISS"];
+    }
+
+    $datos = $response->json();
+
+    // Si Flask no encontró datos, devolver error
+    if (isset($datos["error"])) {
+        return ["error" => $datos["error"]];
+    }
+
+//    Log::info('respuesta es ', $datos);
+
+    // Si la intención no es 'grafico', devolver solo la respuesta de Flask
+    if ($datos["intencion"] !== "ventas") {
+        return ["mensaje" => $datos["resultados"]];
+    }
+
+//    Log::info("Datos Resultados:::". $datos["resultados"]);
 
 
-                        // Llamar a la API de OpenAI
+
+
+
+$promptia="Dar un resumen del siguiente resultado: a la pregunta: .$mensaje ";
+$promptia.=$datos["resultados"];
+
+Log::info("Proptia es :::::::::" .$promptia);
+
+preg_match_all('/Total: \$(\d+\.\d+)/', $datos["resultados"], $matches);
+$total_ventas = array_sum(array_map('floatval', $matches[1]));
+
+
+
+
                         $openAIResponse = Http::withToken(config('services.openai.api_key'))
                         ->post('https://api.openai.com/v1/chat/completions', [
                         'model' => 'gpt-3.5-turbo',
-                        'messages' => $messages,
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'Eres un analista de ventas que resume datos para gerentes de negocios, haz el calculo de totales y porcentajes paso a paso para evitar errores y verifica que tu resultado sea correcto antes de responder.Analiza y da conclusiones de los resultados para su mejor entendimiento.l total real de ventas, que ya ha sido calculado, es $'.$total_ventas.'. No recalcules el total, solo analiza la información'],
+                            ['role' => 'user', 'content' => $promptia]
+                        ],                        
                         'max_tokens' => 4096,
                         'temperature' => 0.1,
                         ]);
 
                         // Manejar la respuesta de OpenAI
                         if ($openAIResponse->successful()) {
+                            Log::info("respuestaopenai exitosa");
+
                             $responseContent = $openAIResponse->json();
-                            //Log::info("Respuesta de OpenAI:", $responseContent);
-
-                            // Agregar la respuesta al historial
-                            $_SESSION['chat_history'][] = [
-                                'role' => 'assistant',
-                                'content' => $responseContent['choices'][0]['message']['content']
-                            ];
-                        
-
-                            $parsedown = new Parsedown();
-                            $htmlContent = $parsedown->text($responseContent['choices'][0]['message']['content']);
-                            return $htmlContent;
-
-            
-
-                        } else {
-                            // Manejar errores en la llamada a la API
-                            Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-                            return response()->json(['error' => 'Error al generar la respuesta.'], 500);
-                        }
-
-                        // Manejar la respuesta de OpenAI
-                        if ($openAIResponse->successful()) {
-                            $responseContent = $openAIResponse->json();
-                          //  Log::info("Respuesta de OpenAI:", $responseContent);
-
-                            // Retornar la respuesta generada por el modelo
-                            return $responseContent['choices'][0]['message']['content'];
-                        } else {
-                            // Manejar errores en la llamada a la API
-                            Log::error("Error al llamar a la API de OpenAI:", $openAIResponse->json());
-                            return response()->json(['error' => 'Error al generar la respuesta.'], 500);
+                        }else{
+                            Log::info("Hubo un error a openai");
                         }
 
 
+                        return [
+                        "assistant_response" => $responseContent['choices'][0]['message']['content'],
+                        "chart_data" => null
+                    ];
 
+}
 
+private function obtenerGrafico($mensaje) {
+    // URL de Flask (ajusta según dónde lo estés ejecutando)
+    $url = "http://127.0.0.1:5002/analizar"; // 
 
-       
+    // Enviar el mensaje a Flask
+    $response = Http::post($url, ["mensaje" => $mensaje]);
 
+    // Verificar si la respuesta fue exitosa
+    if ($response->failed()) {
+        return ["error" => "No se pudo obtener los datos de FAISS"];
+    }
 
-            if ($openAIResponse->successful()) {
-            //   Log::info('Pasando por aquiiiii.... en openairesponse');
-            $responseData = $openAIResponse->json();
-            $generatedText = $responseData['choices'][0]['message']['content'];
-            // Formatear el texto generado
-            $generatedText = nl2br($generatedText); // Convertir saltos de línea a <br>
-            $generatedText = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $generatedText);
+    $datos = $response->json();
 
-            // Convertir los encabezados en <h6>
-            $generatedText = preg_replace('/^### (.+)/m', '<h6>$1</h6>', $generatedText);
+    // Si Flask no encontró datos, devolver error
+    if (isset($datos["error"])) {
+        return ["error" => $datos["error"]];
+    }
 
-            // Convertir las listas con guion (-) en elementos <li>
-            $generatedText = preg_replace('/^- (.+)/m', '<li>$1</li>', $generatedText);
+    // Si la intención no es 'grafico', devolver solo la respuesta de Flask
+    if ($datos["intencion"] !== "grafico") {
+        return ["mensaje" => $datos["respuesta"]];
+    }
 
-            // Envolver las listas en <ul> solo si hay elementos <li>
-            if (strpos($generatedText, '<li>') !== false) {
-                // Envolver solo el contenido de la lista en un <ul>
-                $generatedText = preg_replace('/(<li>.*?<\/li>)/s', '<ul>$0</ul>', $generatedText);
-            }
+    // 🔹 Formatear datos para Chart.js si FAISS devolvió datos
+    $chartData = [
+        "labels" => array_column($datos["resultados"], "fecha_venta"),
+        "datasets" => [
+            [
+                "label" => "Ventas",
+                "data" => array_column($datos["resultados"], "total"),
+                "borderColor" => "rgba(75, 192, 192, 1)",
+                "backgroundColor" => "rgba(75, 192, 192, 0.2)",
+            ]
+        ]
+    ];
 
-            // Procesar las imágenes
-            $generatedText = preg_replace_callback(
-                '/!\[(.*?)\]\((https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg))\)/i',
-                function ($matches) {
-                    return '<img src="' . htmlspecialchars($matches[2]) . '" alt="' . htmlspecialchars($matches[1]) . '" style="max-width:100%; height:auto;" />';
-                },
-                $generatedText
-            );
-            }else{
-                Log::info("openAIResponse No fue succefuls");
-            }
-            // Log::info('URL de la imagen generada: ' . $imageUrl);
-            Log::info('texto generado: ' . $generatedText);
-            //return response()->json(['content' => $generatedText]);
-            //   $generatedText='**Probando markdown**';
-            return $generatedText;
-        
+    return [
+        "assistant_response" => "Aquí tienes el gráfico de ventas:",
+        "chart_data" => $chartData
+    ];
 }
 
 private function crear_email($instruction, $mensaje, $destinatario){
@@ -1291,9 +1340,10 @@ private function enviarEmail($destinatario, $contenido){
 private function interpretarconIA($instruction,$mensaje){
                     Log::info("Interpretando con IA");
 
+
                          $messages = array_merge($instruction, $_SESSION['chat_history']);
 
-                            //Log::info("messages ::::::::::::::::::::::::" .json_encode($messages) );
+                        Log::info("messages ::::::::::::::::::::::::" .json_encode($messages) );
 
 
                             Log::info('linea 1299');
@@ -1308,9 +1358,12 @@ private function interpretarconIA($instruction,$mensaje){
 
                         // Manejar la respuesta de OpenAI
                         if ($openAIResponse->successful()) {
-                            Log::info('linea 1311');
+                            Log::info("respuestaopenai exitosa");
 
                             $responseContent = $openAIResponse->json();
+
+                             Log::info("Linea 1323");
+
                             //Log::info("Respuesta de OpenAI:", $responseContent);
 
                             // Agregar la respuesta al historial
@@ -1319,12 +1372,44 @@ private function interpretarconIA($instruction,$mensaje){
                                 'content' => $responseContent['choices'][0]['message']['content']
                             ];
                         
+                             Log::info("Linea 1333");
 
                             $parsedown = new Parsedown();
+                            Log::info("Linea 1336");
+
                             $htmlContent = $parsedown->text($responseContent['choices'][0]['message']['content']);
-                            return $htmlContent;
+                              Log::info("Linea 1339");
+
+
+
+                            $chartData = null;
+                                if (preg_match('/```json\s*(.*?)\s*```/s', $htmlContent, $matches)) {
+                                    try {
+                                        $chartData = json_decode($matches[1], true); // Convertir JSON a array PHP
+                                        Log::info("Chart Data detectado: " . json_encode($chartData));
+                                    } catch (Exception $e) {
+                                        Log::error("Error al procesar JSON: " . $e->getMessage());
+                                    }
+                                } else {
+                                    Log::info("No se detectó JSON en la respuesta de OpenAI.");
+                                }
+
+
+                            return [
+                            'assistant_response' => $htmlContent,  // el texto
+                            'chart_data' => null,                  // si no lo usas
+                            // 'otros_campos' => ...
+                            ];
+                            Log::info("Linea 1345");
+
+
                             }else{
-                            Log::info('linea 1327');
+                                $statusCode = $openAIResponse->status();
+                                Log::error("OpenAI call failed with status: {$statusCode}");
+
+                                $body = $openAIResponse->body();
+                                Log::error("OpenAI error body: {$body}");
+
                             return "Yo quiero mi primer millon";
                             }
                 }
@@ -1394,7 +1479,7 @@ private function obtenerVentas(){
 }
 
 private function detectarIntencion($mensaje){
-   $response = Http::post('http://127.0.0.1:5001/analizar', ['mensaje' => $mensaje]);
+   $response = Http::post('http://127.0.0.1:5002/analizar', ['mensaje' => $mensaje]);
         $responseData = $response->json();
 
         $intencion     = $responseData['intencion'] ?? null;

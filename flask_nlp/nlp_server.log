@@ -1,0 +1,49 @@
+nohup: ignoring input
+ * Serving Flask app 'nlp_server'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5001
+ * Running on http://167.99.231.77:5001
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 612-453-101
+127.0.0.1 - - [12/Feb/2025 04:51:21] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [12/Feb/2025 04:51:47] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:04:57] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:05:02] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:05:09] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:05:16] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:05:28] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:22:12] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:31:08] "POST /analizar HTTP/1.1" 200 -
+ * Detected change in '/var/www/flask_nlp/nlp_server.py', reloading
+✅ Flask recibió mensaje: envia un mensaje a elisa con el texto holapreicosa
+✅ Flask recibió mensaje: envia un mensaje a elisa con el texto hola bonita
+✅ Flask recibió mensaje: holaaaa
+✅ Flask recibió mensaje: como estas ?
+✅ Flask recibió mensaje: estas bien ?
+✅ Flask recibió mensaje: como van las ventas ?
+✅ Flask recibió mensaje: muestrame el cuadro de ventas
+✅ Flask recibió mensaje: donde esta el cuadro ?
+✅ Flask recibió mensaje: envia un email a elisa dile que su pedido se esta enviando
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 612-453-101
+ * Detected change in '/var/www/flask_nlp/nlp_server.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 612-453-101
+127.0.0.1 - - [13/Feb/2025 01:33:30] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:33:41] "POST /analizar HTTP/1.1" 200 -
+127.0.0.1 - - [13/Feb/2025 01:34:01] "POST /analizar HTTP/1.1" 200 -
+ * Detected change in '/var/www/flask_nlp/nlp_server.py', reloading
+✅ Flask recibió mensaje: enviale por favor un mensaje a elisa dile que su pedido ya esta listo
+✅ Flask recibió mensaje: enviale a su correo
+✅ Flask recibió mensaje: envia un email a elisa con el texto hola
+ * Restarting with stat
+  File "/var/www/flask_nlp/nlp_server.py", line 19
+    intenciones = {
+                  ^
+SyntaxError: '{' was never closed
